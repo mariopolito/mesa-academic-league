@@ -1,0 +1,67 @@
+# Rebuild the page whenever the content sheet publishes.
+#
+# "Publish to site" in the Google Sheet commits content/content.json. This
+# checks it, writes it into mal.html, rebuilds the matching boards and
+# index.html, and commits the page. A content problem fails the "Check the
+# sheet" step with one annotation per problem, which the sheet reads back and
+# shows to whoever clicked Publish -- so those messages are the interface.
+name: Publish from the sheet
+
+on:
+  push:
+    branches: [main]
+    paths: [content/content.json]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Two publishes in a row build one after the other, never on top of each other.
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check the sheet and write it into the page
+        run: python tools/content.py import
+
+      - name: Rebuild the matching boards
+        run: |
+          mkdir -p build
+          python tools/scdump.py
+          python tools/interactions.py --emit --ci
+          python tools/update_iact.py
+
+      - name: Build index.html
+        run: python build.py
+
+      - name: Check the page's script still parses
+        run: |
+          python tools/content.py script build/page.js
+          node --check build/page.js
+
+      - name: Commit the page
+        run: |
+          git config user.name "content-sheet[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mal.html index.html
+          if git diff --cached --quiet; then
+            echo "The page already matches the sheet."
+            exit 0
+          fi
+          git commit -m "Rebuild the page from the content sheet" -m "Content commit ${GITHUB_SHA}"
+          # A second publish may have landed while this one built. It only
+          # touched content.json, so rebasing onto it cannot conflict, and its
+          # own run (queued behind this one) rebuilds from the newer content.
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"

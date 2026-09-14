@@ -1,0 +1,423 @@
+{
+ "readme": [
+  "Mesa Academic League study site: content",
+  "",
+  "Every question, hint and wrong answer on the site comes from this sheet.",
+  "When you are done editing, choose Study site > Publish to site. Nothing",
+  "goes live until then, and if something is wrong the publish stops and",
+  "tells you the tab and row.",
+  "",
+  "Three rules keep students' saved progress safe:",
+  "  1. Never delete a question row. Set Retired to yes instead.",
+  "  2. Add new questions at the bottom, with the ID left blank.",
+  "  3. Never edit an ID.",
+  "",
+  "Text can use <b>bold</b> and <em>italics</em>.",
+  "",
+  "Study site > Pull content from site replaces everything in this sheet",
+  "with what is on the site. Only use it when asked to."
+ ],
+ "tabs": [
+  {
+   "name": "Questions",
+   "columns": [
+    {
+     "h": "ID",
+     "w": 64,
+     "lock": true,
+     "autoid": "q",
+     "note": "Leave blank on a new row; publishing fills it in. Never change or reuse one: students' saved progress is keyed to it."
+    },
+    {
+     "h": "Retired",
+     "w": 70,
+     "choices": [
+      "yes"
+     ],
+     "note": "Set to yes to take a question off the site. Don't delete rows."
+    },
+    {
+     "h": "Quarter",
+     "w": 70,
+     "note": "1, 2, 3 or 4. A question in two quarters: 2, 3"
+    },
+    {
+     "h": "Subject",
+     "w": 70,
+     "choices": [
+      "MA",
+      "SC",
+      "EN",
+      "SS"
+     ]
+    },
+    {
+     "h": "Category",
+     "w": 130,
+     "choices": [
+      "Algebra",
+      "Geometry",
+      "Logic",
+      "Numbers",
+      "Probability",
+      "Word Problems",
+      "Current Events",
+      "Economics",
+      "US Geography",
+      "US Law",
+      "US History",
+      "World Geography",
+      "World History",
+      "Language Arts",
+      "Grammar",
+      "Vocabulary",
+      "Literature",
+      "Physical Sci",
+      "Life Sci",
+      "Earth Sci",
+      "General Science"
+     ]
+    },
+    {
+     "h": "Level",
+     "w": 55,
+     "choices": [
+      "1",
+      "2",
+      "3"
+     ]
+    },
+    {
+     "h": "Question",
+     "w": 420,
+     "wrap": true
+    },
+    {
+     "h": "Answer",
+     "w": 220,
+     "wrap": true
+    },
+    {
+     "h": "Hint",
+     "w": 320,
+     "wrap": true,
+     "note": "Shown when a student asks for help. Nudge, don't tell."
+    },
+    {
+     "h": "Wrong answer 1",
+     "w": 150,
+     "wrap": true,
+     "note": "Three believable wrong answers, used for multiple choice. Fill all three or leave all three blank."
+    },
+    {
+     "h": "Wrong answer 2",
+     "w": 150,
+     "wrap": true,
+     "note": "Three believable wrong answers, used for multiple choice. Fill all three or leave all three blank."
+    },
+    {
+     "h": "Wrong answer 3",
+     "w": 150,
+     "wrap": true,
+     "note": "Three believable wrong answers, used for multiple choice. Fill all three or leave all three blank."
+    },
+    {
+     "h": "List or matching",
+     "w": 90,
+     "choices": [
+      "yes"
+     ],
+     "note": "yes for a question with no single short answer (a list, a matching set, an explain-the-difference). The site turns these into boards where it can."
+    },
+    {
+     "h": "Board clue",
+     "w": 320,
+     "wrap": true,
+     "note": "Category board only: the question rewritten as a statement (\"This economic term describes...\"). Blank uses the question."
+    },
+    {
+     "h": "Board question word",
+     "w": 90,
+     "choices": [
+      "Who",
+      "What",
+      "Where"
+     ],
+     "note": "Category board only: forces Who/What/Where for every option."
+    },
+    {
+     "h": "Board answer",
+     "w": 160,
+     "wrap": true,
+     "note": "Category board only, rarely needed: the answer when the board asks the question the other way round."
+    },
+    {
+     "h": "Board wrong answer 1",
+     "w": 140,
+     "wrap": true
+    },
+    {
+     "h": "Board wrong answer 2",
+     "w": 140,
+     "wrap": true
+    },
+    {
+     "h": "Board wrong answer 3",
+     "w": 140,
+     "wrap": true
+    }
+   ]
+  },
+  {
+   "name": "Spelling",
+   "columns": [
+    {
+     "h": "Word",
+     "w": 130,
+     "note": "Renaming a word resets students' progress on it."
+    },
+    {
+     "h": "Quarter",
+     "w": 70
+    },
+    {
+     "h": "Level",
+     "w": 55,
+     "choices": [
+      "1",
+      "2",
+      "3"
+     ]
+    },
+    {
+     "h": "Definition",
+     "w": 320,
+     "wrap": true
+    },
+    {
+     "h": "Sentence",
+     "w": 360,
+     "wrap": true,
+     "note": "Must contain the word; it is blanked out."
+    },
+    {
+     "h": "Spelling trap",
+     "w": 320,
+     "wrap": true,
+     "note": "Shown after answering. <b>bold</b> and <em>italics</em> work."
+    },
+    {
+     "h": "Wrong word 1",
+     "w": 130
+    },
+    {
+     "h": "Wrong word 2",
+     "w": 130
+    },
+    {
+     "h": "Wrong word 3",
+     "w": 130
+    }
+   ]
+  },
+  {
+   "name": "Mythology",
+   "columns": [
+    {
+     "h": "Greek",
+     "w": 110,
+     "note": "Renaming a god resets students' progress on it."
+    },
+    {
+     "h": "Roman",
+     "w": 110
+    },
+    {
+     "h": "Domain",
+     "w": 300,
+     "wrap": true
+    },
+    {
+     "h": "Memory hook",
+     "w": 360,
+     "wrap": true,
+     "note": "Printed on the back of the card."
+    },
+    {
+     "h": "Card hint",
+     "w": 300,
+     "wrap": true,
+     "note": "Only where the memory hook would give the Roman name away."
+    }
+   ]
+  },
+  {
+   "name": "States",
+   "columns": [
+    {
+     "h": "State",
+     "w": 130,
+     "lock": true,
+     "note": "All fifty, no more and no fewer."
+    },
+    {
+     "h": "Capital",
+     "w": 130
+    },
+    {
+     "h": "Postal code",
+     "w": 70
+    },
+    {
+     "h": "Nicknames",
+     "w": 260,
+     "wrap": true
+    },
+    {
+     "h": "Motto",
+     "w": 260,
+     "wrap": true
+    },
+    {
+     "h": "Nickname story",
+     "w": 360,
+     "wrap": true
+    },
+    {
+     "h": "Motto meaning",
+     "w": 360,
+     "wrap": true
+    }
+   ]
+  },
+  {
+   "name": "Capital groups",
+   "columns": [
+    {
+     "h": "Letter",
+     "w": 70,
+     "note": "The Reference page groups the capitals starting with each letter listed here."
+    }
+   ]
+  },
+  {
+   "name": "Tip-offs",
+   "columns": [
+    {
+     "h": "ID",
+     "w": 64,
+     "lock": true,
+     "autoid": "tip:"
+    },
+    {
+     "h": "Question",
+     "w": 380,
+     "wrap": true
+    },
+    {
+     "h": "Answer",
+     "w": 160,
+     "wrap": true
+    },
+    {
+     "h": "Why",
+     "w": 360,
+     "wrap": true
+    },
+    {
+     "h": "Hint",
+     "w": 300,
+     "wrap": true
+    },
+    {
+     "h": "Board statement",
+     "w": 320,
+     "wrap": true
+    },
+    {
+     "h": "Wrong answer 1",
+     "w": 140
+    },
+    {
+     "h": "Wrong answer 2",
+     "w": 140
+    },
+    {
+     "h": "Wrong answer 3",
+     "w": 140
+    }
+   ]
+  },
+  {
+   "name": "Verb tenses",
+   "columns": [
+    {
+     "h": "ID",
+     "w": 70,
+     "lock": true,
+     "autoid": "tense:"
+    },
+    {
+     "h": "Tense",
+     "w": 150
+    },
+    {
+     "h": "Formula",
+     "w": 170
+    },
+    {
+     "h": "Example",
+     "w": 300,
+     "wrap": true
+    },
+    {
+     "h": "Meaning",
+     "w": 300,
+     "wrap": true
+    },
+    {
+     "h": "Why",
+     "w": 320,
+     "wrap": true
+    },
+    {
+     "h": "Hint",
+     "w": 300,
+     "wrap": true
+    }
+   ]
+  },
+  {
+   "name": "Memorize boards",
+   "columns": [
+    {
+     "h": "Board ID",
+     "w": 80,
+     "note": "Short, lowercase, no spaces. Students' progress on a pair is keyed to it."
+    },
+    {
+     "h": "Board name",
+     "w": 170
+    },
+    {
+     "h": "Left heading",
+     "w": 110
+    },
+    {
+     "h": "Right heading",
+     "w": 130
+    },
+    {
+     "h": "Left",
+     "w": 200,
+     "wrap": true
+    },
+    {
+     "h": "Right",
+     "w": 320,
+     "wrap": true
+    }
+   ]
+  }
+ ]
+}

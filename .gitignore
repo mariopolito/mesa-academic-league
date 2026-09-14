@@ -1,0 +1,24 @@
+# This folder also holds the study-guide packets, the fact-check report written
+# for the club sponsor, the school logo and backups. None of that belongs in a
+# public repo, so everything is ignored unless it is listed here.
+/*
+!/.gitignore
+!/.gitattributes
+!/.github/
+!/README.md
+!/index.html
+!/mal.html
+!/build.py
+!/content/
+!/sheet/
+
+!/tools/
+/tools/*
+!/tools/content.py
+!/tools/jslit.py
+!/tools/test_content.py
+!/tools/scdump.py
+!/tools/interactions.py
+!/tools/update_iact.py
+
+__pycache__/
