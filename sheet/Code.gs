@@ -708,7 +708,7 @@ Guide_.prototype.para = function (runs, f) {
     p = firstPara_(this.body);
     this.fresh = false;
   } else {
-    p = this.body.appendParagraph('');
+    p = this.body.appendParagraph(' ');   // Docs refuses an empty text element
   }
   p.setHeading(DocumentApp.ParagraphHeading.NORMAL)
     .setAlignment(f.align || DocumentApp.HorizontalAlignment.LEFT)
@@ -734,7 +734,13 @@ Guide_.prototype.pageBreak = function () {
 Guide_.prototype.table = function (widths, header, rows, f) {
   f = f || {};
   var all = (header ? [header] : []).concat(rows);
-  var t = this.body.appendTable(all.map(function (r) { return r.map(function () { return ''; }); }));
+  // Built row by row with a placeholder space in every cell: Docs refuses an
+  // empty text element, and appendTable([['', ...]]) is one.
+  var t = this.body.appendTable();
+  all.forEach(function (r) {
+    var tr = t.appendTableRow();
+    r.forEach(function () { tr.appendTableCell(' '); });
+  });
   t.setBorderWidth(f.borderless ? 0 : 0.5).setBorderColor(f.borderless ? '#ffffff' : '#000000');
   widths.forEach(function (w, j) { t.setColumnWidth(j, w * CM); });
   all.forEach(function (r, i) {
@@ -746,7 +752,7 @@ Guide_.prototype.table = function (widths, header, rows, f) {
         cell.setBackgroundColor('#e8e8e8');
         runs = runs.map(function (x) { return [x[0], merge_(x[1], { bold: true })]; });
       }
-      var p = cell.getChild(0).asParagraph();
+      var p = firstPara_(cell);
       p.setSpacingBefore(0).setSpacingAfter(0).setLineSpacing(1);
       writeRuns_(p, runs.map(function (x) { return [x[0], merge_({ size: f.size || 8.5 }, x[1])]; }));
     });
@@ -754,12 +760,12 @@ Guide_.prototype.table = function (widths, header, rows, f) {
   return t;
 };
 
-/** The empty paragraph a cleared body or footer keeps, or a new one. */
+/** The paragraph a cleared body, footer or new cell keeps, or a new one. */
 function firstPara_(container) {
   if (container.getNumChildren() && container.getChild(0).getType() === DocumentApp.ElementType.PARAGRAPH) {
     return container.getChild(0).asParagraph();
   }
-  return container.appendParagraph('');
+  return container.appendParagraph(' ');
 }
 
 function merge_(a, b) {
@@ -778,8 +784,10 @@ function writeRuns_(p, runs) {
     marks.push({ s: text.length, e: text.length + t.length, st: r[1] || {}, rc: rc });
     text += t;
   });
-  p.setText(text);
+  // An empty run list leaves the paragraph as it is (blank, or the placeholder
+  // space); setting empty text is what Docs refuses.
   if (!text.length) return;
+  p.setText(text);
   var tx = p.editAsText();
   tx.setFontFamily(FONT).setFontSize(9.5).setBold(false).setItalic(false).setForegroundColor('#000000');
   marks.forEach(function (m) {
