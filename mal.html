@@ -4782,10 +4782,36 @@ function scrimNext(){
   if(SC.n!=="endless"&&SC.i>=SC.n){scrimResults();return;}
   scrimRound();
 }
+/* The memorize boards from the sheet, in the shapes these formats take: the
+   quiz's items (three written or borrowed wrong answers) for multiple choice
+   and true-or-false, the buzzer's (both ways round, hint under the answer) for
+   buzz, and the buzzer's reverse half for typing -- "which root goes with
+   'sea or ocean'?" has a short answer, the other way round does not. Every
+   item carries the pair's id, so a miss here hands back its card. The boards
+   sit outside the quarters; pickMix decides how often they come up. */
+const scBoardQuiz=()=>[].concat(...sheetBoards().map(qsBoard));
+const scBoardBuzz=()=>bBoards();
+const scBoardType=()=>bBoards().filter((x,i)=>i%2===1&&!/&/.test(x.a)&&x.a.split(/\s+/).length<=3)
+  /* "-pede" and "intro-": the hyphen is how the board marks a root, not
+     something to type. */
+  .map(x=>Object.assign({},x,{typed:x.a.replace(/^-+|-+$/g,"")}));
+
+/* The quarter's bank and the unscoped boards are two pools, not one list.
+   Pooled together, 36 board pairs swamped a thin quarter -- a Quarter 2
+   scrimmage was three rounds in four board pairs, which is not a Quarter 2
+   scrimmage. The boards get their natural share, capped at one round in five. */
+const BOARDSHARE=0.2;
+function pickMix(bank,boards){
+  if(!bank.length)return pick(boards);
+  if(!boards.length)return pick(bank);
+  return rnd()<Math.min(boards.length/(bank.length+boards.length),BOARDSHARE)?pick(boards):pick(bank);
+}
+
 function scrimRound(){
   /* mc, type and tf all draw on the auto-gradable pool. In a quarter that is
      mostly matching sets that pool can be tiny, so drop those formats rather
-     than cycle the same handful of questions. */
+     than cycle the same handful of questions -- the capped board share does
+     not change that. */
   const thin=gradable().length<12;
   let menu=thin?FMTS.filter(f=>!["mc","type","tf"].includes(f.k)):FMTS;
   if(!Q.some(x=>inQ(x)&&x.iv))menu=menu.filter(f=>f.k!=="iact");
@@ -4798,13 +4824,13 @@ function scrimRound(){
 
 /* ---- multiple choice ---- */
 function rMC(f){
-  const cur=pick(gradable().filter(quizzable));
-  SC.cur={fmt:"mc",qid:cur.id};
-  const distract=(DIST[cur.a]||[]).slice(0,3);
+  const cur=pickMix(gradable().filter(quizzable),scBoardQuiz());
+  SC.cur=cur.ref?{fmt:"mc",cid:cur.cid}:{fmt:"mc",qid:cur.id};
+  const distract=((cur.ref?cur.d:DIST[cur.a])||[]).slice(0,3);
   const add=l=>{for(const v of l){if(distract.length>=3)break;if(v!==cur.a&&!distract.includes(v))distract.push(v);}};
   if(distract.length<3)add(shuffle(gradable().filter(x=>x.c===cur.c&&x.a!==cur.a&&shortAns(x))).map(x=>x.a));
   const opts=shuffle([cur.a,...distract]);
-  scrimShell(f,cur.c,"Level "+cur.l,
+  scrimShell(f,cur.c,cur.ref?"Memorize board":"Level "+cur.l,
     `<p class="qtext">${esc(cur.q)}</p>
      <div class="opts">${opts.map((o,i)=>`<button class="opt" data-i="${i}"><u>${"ABCD"[i]}</u><span>${o}</span></button>`).join("")}</div>`,
     `<span class="hint" style="margin-left:0">Pick one before the clock runs out.</span>`);
@@ -4818,27 +4844,27 @@ function rMC(f){
 }
 /* ---- type the answer ---- */
 function rType(f){
-  const pool=gradable().filter(typeable);
-  const cur=pick(pool);
-  SC.cur={fmt:"type",qid:cur.id};
-  scrimShell(f,cur.c,"Level "+cur.l,
+  const cur=pickMix(gradable().filter(typeable),scBoardType());
+  SC.cur=cur.ref?{fmt:"type",cid:cur.cid}:{fmt:"type",qid:cur.id};
+  scrimShell(f,cur.c,cur.ref?"Memorize board":"Level "+cur.l,
     `<p class="qtext">${esc(cur.q)}</p>
      <div style="margin-top:20px;max-width:440px"><input type="text" id="scIn" placeholder="Type your answer" autocomplete="off" spellcheck="false"></div>`,
     `<button class="btn primary" id="scGo">Submit</button>
      <span class="hint">Spelling can be loose &mdash; <kbd>Enter</kbd> to submit.</span>`);
   const inp=$("#scIn");inp.focus();
-  const go=()=>{const ok=typedOK(inp.value,cur.a);scrimGrade(ok,ok?"":"Answer: "+cur.a);};
+  const go=()=>{const ok=typedOK(inp.value,cur.typed||cur.a)||typedOK(inp.value,cur.a);
+    scrimGrade(ok,ok?"":"Answer: "+cur.a);};
   $("#scGo").onclick=go;inp.addEventListener("keydown",e=>{if(e.key==="Enter")go();});
 }
 /* ---- buzz and self-grade (the long ones live here) ---- */
 function rBuzz(f){
   /* Prefer questions that have no interaction — those are better served by the
      "Sort it out" round than by reading the key and self-grading. */
-  const plain=Q.filter(x=>inQ(x)&&!x.iv);
-  const cur=pick(plain.length?plain:Q.filter(inQ));
-  SC.cur={fmt:"buzz",qid:cur.id,a:cur.a};
-  scrimShell(f,cur.c,"Level "+cur.l,
-    `<p class="qtext">${esc(cur.q)}</p><div class="answer" id="scA" hidden><i>Answer</i><p>${cur.a}</p></div>`,
+  const bare=Q.filter(x=>inQ(x)&&!x.iv);
+  const cur=pickMix(bare.length?bare:Q.filter(inQ),scBoardBuzz());
+  SC.cur=cur.ref?{fmt:"buzz",cid:cur.cid,a:cur.a}:{fmt:"buzz",qid:cur.id,a:cur.a};
+  scrimShell(f,cur.c,cur.ref?"Memorize board":"Level "+cur.l,
+    `<p class="qtext">${esc(cur.q)}</p><div class="answer" id="scA" hidden><i>Answer</i><p>${cur.a}</p>${cur.why?'<div class="trap">'+cur.why+'</div>':""}</div>`,
     `<button class="btn primary" id="scBuzz">Buzz &mdash; reveal</button>
      <span class="hint">Say it out loud first. <kbd>Space</kbd> to buzz.</span>`);
   $("#scBuzz").onclick=()=>scrimBuzzReveal(false);
@@ -4855,11 +4881,11 @@ function scrimBuzzReveal(out){
 }
 /* ---- true or false ---- */
 function rTF(f){
-  const cur=pick(gradable().filter(x=>DIST[x.a]));
+  const cur=pickMix(gradable().filter(x=>DIST[x.a]),scBoardQuiz());
   const showTrue=rnd()<0.5;
-  const claim=showTrue?cur.a:pick(DIST[cur.a]);
-  SC.cur={fmt:"tf",qid:cur.id};
-  scrimShell(f,cur.c,"Level "+cur.l,
+  const claim=showTrue?cur.a:pick(cur.ref?cur.d:DIST[cur.a]);
+  SC.cur=cur.ref?{fmt:"tf",cid:cur.cid}:{fmt:"tf",qid:cur.id};
+  scrimShell(f,cur.c,cur.ref?"Memorize board":"Level "+cur.l,
     `<p class="qtext">${esc(cur.q)}</p>
      <div class="claim"><span class="cluelabel">Claimed answer</span><b>${claim}</b></div>`,
     `<button class="btn go" id="scT">True</button><button class="btn no" id="scF">False</button>
