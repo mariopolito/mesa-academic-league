@@ -3086,11 +3086,14 @@ const B={deck:"all",s:"ALL",l:[],cur:null,t:null,left:12,revealed:false,running:
    tip-offs (which used to be their own panel), the reference tables, and the
    self-check questions that have no gradable shape -- "explain the difference
    between a market and a command economy" is a buzzer question, not a widget. */
+/* The boards typed into the sheet's Memorize boards tab carry sheet:1; each
+   gets a buzzer set, a flashcard deck and a quiz set. */
+const sheetBoards=()=>Object.keys(MATCHSETS).filter(k=>MATCHSETS[k].sheet);
 const bItem=(q,a,c,l,cid,why)=>({q:q,a:a,c:c,l:l||1,cid:cid,why:why,ref:true});
 const bBank=subj=>Q.filter(x=>inQ(x)&&!x.sc&&(!subj||x.s===subj)&&lvOK(B,x));
 const BSETS={
   every:{n:"Everything",g:"mix",lv:1,build:()=>bBank().concat(
-    bTip(),bCaps(),bNick(),bMotto(),bMyth(),bLong())},
+    bTip(),bCaps(),bNick(),bMotto(),bMyth(),bLong(),bBoards())},
   all:{n:"All subjects",g:"subj",lv:1,build:()=>bBank()},
   MA:{n:"Math",g:"subj",lv:1,build:()=>bBank("MA")},
   SC:{n:"Science",g:"subj",lv:1,build:()=>bBank("SC")},
@@ -3116,6 +3119,23 @@ const bMyth=()=>MYTH.flatMap(m=>[
     m.r+" \u2014 "+m.d.toLowerCase(),"Mythology",1,"myth:"+m.g,m.n),
   bItem("Which god or goddess rules over "+m.d.toLowerCase()+"? Give both names.",
     m.g+" (Greek), "+m.r+" (Roman)","Mythology",2,"myth:"+m.g,m.n)]);
+/* A memorize board, both ways round. Out loud there are no options to give
+   the answer away, so the reverse -- "which root goes with 'sea or ocean'?" --
+   costs nothing here, unlike the quiz. The hint prints under the revealed
+   answer, where "a century is this many years" is the thing that makes it
+   stick. The id is the pair's, shared with the board, the card and the quiz. */
+const bBoard=k=>{
+  const b=MATCHSETS[k],one=/^[A-Za-z]+$/.test(b.l),what=b.l.toLowerCase();
+  return b.pairs.flatMap(p=>[
+    bItem(one?"What does the "+what+" \u201c"+p[0]+"\u201d mean?":"What does \u201c"+p[0]+"\u201d mean?",
+      p[1],plain(b.name),1,msetId(k,p[0]),p[2]||""),
+    bItem("Which "+(one?what:"one")+" goes with \u201c"+p[1]+"\u201d?",
+      p[0],plain(b.name),1,msetId(k,p[0]),p[2]||"")]);
+};
+const bBoards=()=>[].concat(...sheetBoards().map(bBoard));
+/* Here, not beside the decks: buzzCtl() paints the set chips as soon as the
+   buzzer's code has loaded, and a set added after that has no chip. */
+sheetBoards().forEach(k=>{BSETS["mb-"+k]={n:MATCHSETS[k].name,g:"set",build:()=>bBoard(k)};});
 /* The 41 self-check questions no parser could turn into a widget. They are
    exactly what this mode is for: read it, answer out loud, grade yourself. */
 const bLong=()=>Q.filter(x=>inQ(x)&&x.sc&&!x.iv&&lvOK(B,x))
@@ -3326,7 +3346,6 @@ const cardsMyth =()=>MYTH.map(m=>[
    tabs (capitals, nicknames, gods...) already have decks of their own.
    A pair is [left, right, hint?, wrong answers?]; the card id is the same one
    the matching board records, so a pair is one item wherever it is drilled. */
-const sheetBoards=()=>Object.keys(MATCHSETS).filter(k=>MATCHSETS[k].sheet);
 const boardHint=right=>{
   const words=right.split(/\s+/).filter(Boolean).length;
   return "It starts with \u201c"+right[0].toUpperCase()+"\u201d"+(words>1?" and runs "+words+" words.":".");
