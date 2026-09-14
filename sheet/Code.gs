@@ -7,6 +7,9 @@
  *   Publish to site          commits the sheet to content/content.json in the
  *                            GitHub repo; a GitHub Action checks it, rebuilds
  *                            index.html, and this reports back what happened.
+ *   Regenerate study guide   rewrites the printable study guide, a Google Doc,
+ *                            from this sheet. Nothing leaves Google: the
+ *                            packet is never put in the public repo.
  *   Pull content from site   replaces every tab with what the repo holds.
  *   Connect to GitHub...     stores the token the other two use.
  *
@@ -27,6 +30,7 @@ var WAIT_MS = 4.5 * 60 * 1000;   // Apps Script stops a menu function at six min
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('Study site')
     .addItem('Publish to site', 'publishToSite')
+    .addItem('Regenerate study guide', 'regenerateStudyGuide')
     .addSeparator()
     .addItem('Pull content from site (replaces this sheet)', 'pullFromSite')
     .addItem('Connect to GitHub…', 'connectGitHub')
@@ -388,4 +392,556 @@ function annotations_(run) {
   out.failure = out.failure.slice(0, 12);
   out.warning = out.warning.slice(0, 8);
   return out;
+}
+
+// ------------------------------------------------------------ study guide
+//
+// The printable packet, rebuilt from the sheet as a Google Doc. It reads the
+// same tabs the site does, plus one tab of its own -- "Study guide text", the
+// grammar notes, footnotes and title that the site has no use for. That tab is
+// not published and Pull never touches it.
+//
+// The document is rewritten in place, so its link, its sharing and its place
+// in Drive survive every regeneration. Only DocumentApp is used, never
+// DriveApp, so the sheet never asks for access to the rest of anyone's Drive.
+
+var GUIDE_TAB = 'Study guide text';
+var GUIDE_PARTS = ['Title', 'Subtitle', 'Footer', 'Capitals note', 'States note',
+  'Grammar', 'Sentence type', 'Tense pattern', 'Tip-offs note', 'Mythology note'];
+var GUIDE_DEFAULTS = [
+  ['Title', '', 'MAL Study Guide', ''],
+  ['Subtitle', '', 'Mesa Academic League · Mesa Academy for Advanced Studies · 2026–27', ''],
+  ['Footer', '', 'Mesa Academic League · Study Guide 2026–27', ''],
+  ['Capitals note', 'Potential questions', 'name the five capitals beginning with A, the four beginning with B, the six beginning with C.', ''],
+  ['States note', '', '“Sunshine State” is listed for both Florida and New Mexico. Both have a historical claim, but Florida’s is the official one.', ''],
+  ['States note', '', 'North Dakota’s “Sioux State” is genuine but dated; Peace Garden State and Flickertail State are current.', ''],
+  ['Grammar', 'Transitive verb', 'Requires a noun or pronoun to complete its meaning — answers who(m)? or what?', 'The students write essays.  (Without “essays” the sentence makes no sense.)'],
+  ['Grammar', 'Intransitive verb', 'Does not require an object to complete its meaning — answers when, where, how or why.', 'The children sat.'],
+  ['Grammar', 'Preposition', 'Shows how a noun or pronoun relates to other words in the sentence — usually time, distance or position: of, at, by, near, under, over, beside, among, between, down, along, behind, inside.  Note: the subject of a sentence may never come from a prepositional phrase.', 'The book sat near the lamp.'],
+  ['Sentence type', 'Simple', 'One independent clause.', 'The children sat.'],
+  ['Sentence type', 'Compound', 'Two or more independent clauses joined by a semicolon or a conjunction (and, but, or, so).', 'The children sat, but they were not happy.'],
+  ['Sentence type', 'Complex', 'One independent clause and at least one dependent clause.', 'The children sat because they were told to.'],
+  ['Sentence type', 'Compound-complex', 'At least two independent clauses and at least one dependent clause.', 'The children sat, but they got up before they were supposed to.'],
+  ['Tense pattern', 'Continuous', '(be) + (verb) + ing', ''],
+  ['Tense pattern', 'Perfect', '(have) + (verb)', ''],
+  ['Tense pattern', 'Perfect continuous', '(have) + been + (verb) + ing', ''],
+  ['Tip-offs note', '', 'Think super fast buzzing.', ''],
+  ['Mythology note', '', 'Mars was more honored in Rome as a guardian of agriculture and the state, unlike the often disliked Ares.', ''],
+  ['Mythology note', '', 'Apollo is the one god who kept the same name in both traditions.', '']
+];
+var GUIDE_NOTES = {
+  Part: 'Which part of the study guide this row feeds. Rows of the same part print in this order.',
+  Name: 'The bold label, where the part has one (a grammar term, a sentence type, a tense aspect).',
+  Text: 'What prints. Text can use <b>bold</b> and <em>italics</em>.',
+  Example: 'The example sentence, for Grammar and Sentence type rows.'
+};
+
+var CATEGORY_CODE = {
+  'Algebra': 'AL', 'Geometry': 'GE', 'Logic': 'LG', 'Numbers': 'NE', 'Probability': 'PR',
+  'Word Problems': 'WP', 'Current Events': 'CE', 'Economics': 'EC', 'US Geography': 'UG',
+  'US Law': 'UL', 'US History': 'UH', 'World Geography': 'WG', 'World History': 'WH',
+  'Language Arts': 'LA', 'Grammar': 'GR', 'Vocabulary': 'VC', 'Literature': 'LT',
+  'Physical Sci': 'PS', 'Life Sci': 'LS', 'Earth Sci': 'ES', 'General Science': 'GS'
+};
+var LEGEND = [
+  ['MATH', ['AL  Algebra', 'GE  Geometry', 'LG  Logic', 'NE  Numeric Expressions & Arithmetic',
+    'PR  Probability, Permutations & Combinations', 'WP  Word Problems']],
+  ['SOCIAL STUDIES', ['CE  Current Events', 'EC  Economics', 'UG  US Geography', 'UL  US Law',
+    'UH  US History', 'WG  World Geography', 'WH  World History']],
+  ['ENGLISH', ['LA  Language Arts', 'GR  Grammar', 'SP  Spelling', 'VC  Vocabulary', 'LT  Literature']],
+  ['SCIENCE', ['PS  Physical Science', 'LS  Life Science', 'ES  Earth Science', 'GS  General Science']]
+];
+// A matching question carries its parallel lists in one sentence ("Cities: ...
+// Countries: ..."); each list starts its own line. Same list as build_packet.py.
+var LIST_LABELS = ['Countries', 'Country', 'Civilizations', 'Definitions', 'Constitution',
+  'Amendments', 'New Name', 'Old Name', 'Cities', 'Areas', 'Time Periods', 'Events',
+  'Inventions', 'Poets', 'Titles', 'Book', 'Books', 'Setting', 'Languages', 'Terms', 'Words',
+  'Examples', 'Devices', 'National Parks', 'States', 'Landmarks', 'Cemeteries', 'Parks',
+  'Homes', 'Animals', 'Fables', 'Specialty', 'Works', 'Cases', 'Rivers', 'Dictators',
+  'Relationships', 'Rock type', 'Parent rock', 'Becomes', 'Monetary system'];
+
+var CM = 28.3465;               // points
+var GREY = '#555555';
+var FONT = 'Calibri';
+
+function regenerateStudyGuide() {
+  guarded_('Regenerate study guide', function () {
+    var ss = SpreadsheetApp.getActive();
+    var ui = SpreadsheetApp.getUi();
+    ss.toast('Reading the sheet…', 'Study guide', 30);
+    var text = guideText_(ss);
+    var data = guideData_(ss, text);
+    var doc = guideDoc_(ui);
+    if (!doc) return;
+    ss.toast('Writing the study guide. This takes a minute…', 'Study guide', 180);
+    doc.setName(text.one('Footer') ? plainText_(text.one('Footer')) : 'MAL Study Guide');
+    renderGuide_(doc, data, text);
+    var url = doc.getUrl();
+    doc.saveAndClose();
+
+    var lines = data.quarters.map(function (q) {
+      return 'Quarter ' + q.n + ': ' + q.items.length + ' questions';
+    });
+    var html = '<div style="font:14px/1.45 Arial,sans-serif">' +
+      '<p>The study guide now matches this sheet.</p>' +
+      '<p><a href="' + escHtml_(url) + '" target="_blank" style="font-weight:bold">Open the study guide</a></p>' +
+      '<p style="margin:0">' + lines.map(escHtml_).join('<br>') + '</p>' +
+      (data.spelled ? '<p style="margin:6px 0 0">Spelling words are included in their quarters (' + data.spelled + ').</p>' : '') +
+      (data.retired ? '<p style="margin:6px 0 0">' + data.retired + ' retired question' + (data.retired === 1 ? ' is' : 's are') + ' left out.</p>' : '') +
+      (data.notes.length ? '<p style="margin:6px 0 0"><b>Worth a look:</b><br>• ' + data.notes.slice(0, 8).map(escHtml_).join('<br>• ') + '</p>' : '') +
+      (text.created ? '<p style="margin:6px 0 0">A <b>' + GUIDE_TAB + '</b> tab was added to this sheet. Its grammar notes, footnotes and title print in the guide; edit them there.</p>' : '') +
+      '<p style="color:#555;margin:10px 0 0">To hand out a Word file: in the document, File › Download › Microsoft Word.</p>' +
+      '</div>';
+    ui.showModalDialog(HtmlService.createHtmlOutput(html).setWidth(460).setHeight(330), 'Regenerate study guide');
+  });
+}
+
+function escHtml_(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/** The document to write into: the one made last time, or a new one. */
+function guideDoc_(ui) {
+  var id = props_().getProperty('GUIDE_DOC_ID');
+  if (id) {
+    try {
+      return DocumentApp.openById(id);
+    } catch (e) {
+      var again = ui.alert('Regenerate study guide',
+        'The study guide document could not be opened. Either it was deleted, or it has ' +
+        'not been shared with you (ask Mario to share it as an editor, then try again).\n\n' +
+        'Make a brand-new study guide document instead?', ui.ButtonSet.YES_NO);
+      if (again !== ui.Button.YES) return null;
+    }
+  }
+  var doc = DocumentApp.create('MAL Study Guide');
+  props_().setProperty('GUIDE_DOC_ID', doc.getId());
+  return doc;
+}
+
+/** A tab as objects keyed by header, blank rows dropped. */
+function rowsOf_(ss, name, need) {
+  var sh = ss.getSheetByName(name);
+  if (!sh) fail_('The "' + name + '" tab is missing, so the study guide can’t be built. Tabs can’t be renamed or deleted.');
+  var grid = sh.getDataRange().getDisplayValues();
+  var head = (grid[0] || []).map(function (h) { return String(h).trim(); });
+  need.forEach(function (h) {
+    if (head.indexOf(h) < 0) fail_('The "' + name + '" tab has no "' + h + '" column, so the study guide can’t be built.');
+  });
+  var out = [];
+  for (var i = 1; i < grid.length; i++) {
+    if (!grid[i].some(function (v) { return String(v).trim() !== ''; })) continue;
+    var o = { row: i + 1 };
+    head.forEach(function (h, j) { if (h) o[h] = String(grid[i][j] == null ? '' : grid[i][j]).trim(); });
+    out.push(o);
+  }
+  return out;
+}
+
+/** The Study guide text tab, made and filled with the defaults on first use. */
+function guideText_(ss) {
+  var created = false;
+  if (!ss.getSheetByName(GUIDE_TAB)) {
+    var sh = ss.insertSheet(GUIDE_TAB);
+    var cols = ['Part', 'Name', 'Text', 'Example'];
+    var max = GUIDE_DEFAULTS.length + 100;
+    if (sh.getMaxRows() < max) sh.insertRowsAfter(sh.getMaxRows(), max - sh.getMaxRows());
+    sh.getRange(1, 1, sh.getMaxRows(), 4).setNumberFormat('@').setVerticalAlignment('top');
+    var grid = [cols].concat(GUIDE_DEFAULTS).map(function (r) { return r.map(cell_); });
+    sh.getRange(1, 1, grid.length, 4).setValues(grid);
+    sh.getRange(1, 1, 1, 4).setFontWeight('bold').setBackground('#e8ecf3');
+    sh.setFrozenRows(1);
+    [130, 150, 520, 360].forEach(function (w, j) {
+      sh.setColumnWidth(j + 1, w);
+      sh.getRange(1, j + 1).setNote(GUIDE_NOTES[cols[j]]);
+      sh.getRange(2, j + 1, sh.getMaxRows() - 1, 1).setWrap(j >= 2);
+    });
+    sh.getRange(2, 1, sh.getMaxRows() - 1, 1).setDataValidation(SpreadsheetApp.newDataValidation()
+      .requireValueInList(GUIDE_PARTS, true).setAllowInvalid(false).build());
+    created = true;
+  }
+  var rows = rowsOf_(ss, GUIDE_TAB, ['Part', 'Name', 'Text', 'Example']);
+  return {
+    created: created,
+    all: function (part) { return rows.filter(function (r) { return r.Part === part; }); },
+    one: function (part) {
+      var r = rows.filter(function (x) { return x.Part === part; })[0];
+      return r ? r.Text : '';
+    }
+  };
+}
+
+function firstQuarter_(s) {
+  var m = String(s).match(/\d+/);
+  return m ? parseInt(m[0], 10) : null;
+}
+
+/** Everything the guide prints, read from the tabs and put in print order. */
+function guideData_(ss, text) {
+  var notes = [];
+  var qs = rowsOf_(ss, 'Questions', ['Retired', 'Quarter', 'Subject', 'Category', 'Level', 'Question', 'Answer']);
+  var spell = rowsOf_(ss, 'Spelling', ['Word', 'Quarter', 'Level', 'Sentence']);
+  var states = rowsOf_(ss, 'States', ['State', 'Capital', 'Nicknames', 'Motto']);
+  var tips = rowsOf_(ss, 'Tip-offs', ['Question', 'Answer']);
+  var tenses = rowsOf_(ss, 'Verb tenses', ['Tense', 'Formula', 'Example', 'Meaning']);
+  var myth = rowsOf_(ss, 'Mythology', ['Greek', 'Roman', 'Domain']);
+
+  var byQ = {};
+  var retired = 0;
+  function bucket(n) { return byQ[n] || (byQ[n] = { n: n, items: [] }); }
+  qs.forEach(function (r) {
+    if (!r.Question) return;
+    if (/^(yes|y|x|true)$/i.test(r.Retired)) { retired++; return; }
+    var n = firstQuarter_(r.Quarter);
+    if (n === null) { notes.push('Questions row ' + r.row + ' has no quarter, so it is not in the guide.'); return; }
+    var cat = CATEGORY_CODE[r.Category] || r.Category;
+    // A question printed in two quarters is printed once, in the first.
+    bucket(n).items.push({ code: r.Subject + '-' + cat + '-' + r.Level, q: r.Question, a: r.Answer, s: r.Subject });
+  });
+
+  // Each spelling word is its own question. A quarter's words print together,
+  // straight after its last English question.
+  var spelled = 0, words = {};
+  spell.forEach(function (r) {
+    var word = plainText_(r.Word);
+    if (!word) return;
+    var n = firstQuarter_(r.Quarter);
+    if (n === null) { notes.push('Spelling row ' + r.row + ' has no quarter, so it is not in the guide.'); return; }
+    var q = r.Sentence
+      ? 'Say and spell the word “' + word + '” as it is used in the following sentence: “' + r.Sentence + '”'
+      : 'Say and spell the word “' + word + '.”';
+    (words[n] = words[n] || []).push({ code: 'EN-SP-' + r.Level, q: q, s: 'EN',
+      a: word.toLowerCase().split(' ').map(function (w) { return w.split('').join('-'); }).join(' ') });
+    spelled++;
+  });
+  Object.keys(words).forEach(function (n) {
+    var items = bucket(Number(n)).items, at = -1;
+    items.forEach(function (x, i) { if (x.s === 'EN') at = i; });
+    Array.prototype.splice.apply(items, [at + 1, 0].concat(words[n]));
+  });
+
+  var quarters = Object.keys(byQ).map(Number).sort(function (a, b) { return a - b; })
+    .map(function (n) { return byQ[n]; });
+  quarters.forEach(function (q) { q.items.forEach(function (x, i) { x.n = i + 1; }); });
+
+  return {
+    quarters: quarters, retired: retired, spelled: spelled, notes: notes,
+    capitals: states.filter(function (r) { return r.State && r.Capital; })
+      .map(function (r) { return [r.State, r.Capital]; }),
+    states: states.filter(function (r) { return r.State; })
+      .map(function (r) { return [r.State, r.Nicknames, r.Motto]; }),
+    tips: tips.filter(function (r) { return r.Question; }).map(function (r) { return [r.Question, r.Answer]; }),
+    tenses: tenses.filter(function (r) { return r.Tense; }),
+    myth: myth.filter(function (r) { return r.Greek; }).map(function (r) { return [r.Domain, r.Greek, r.Roman]; })
+  };
+}
+
+// ----------------------------------------------------------- text and markup
+
+var ENTITIES = {
+  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', rarr: '→', larr: '←',
+  mdash: '—', ndash: '–', hellip: '…', lsquo: '‘', rsquo: '’', ldquo: '“', rdquo: '”',
+  times: '×', divide: '÷', minus: '−', deg: '°', frac12: '½', frac14: '¼', frac34: '¾',
+  eacute: 'é', middot: '·', sup2: '²', sup3: '³', pi: 'π', le: '≤', ge: '≥', ne: '≠'
+};
+
+/** Sheet text with its <b>/<em> markup read into bold and italic spans. */
+function rich_(s) {
+  s = String(s == null ? '' : s);
+  var out = '', bold = [], ital = [], b = 0, it = 0, bAt = 0, iAt = 0;
+  var re = /<(\/?)(b|strong|i|em|br)\b[^>]*>|<\/?[a-z][^>]*>|&(#x[0-9a-f]+|#\d+|[a-z0-9]+);/gi;
+  var last = 0, m;
+  while ((m = re.exec(s))) {
+    out += s.slice(last, m.index);
+    last = re.lastIndex;
+    if (m[3]) {
+      var e = m[3];
+      if (e[0] === '#') {
+        var code = e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
+        out += String.fromCharCode(code);
+      } else {
+        out += ENTITIES.hasOwnProperty(e) ? ENTITIES[e] : m[0];
+      }
+      continue;
+    }
+    var tag = (m[2] || '').toLowerCase(), close = m[1] === '/';
+    if (tag === 'br') { out += ' '; continue; }
+    if (tag === 'b' || tag === 'strong') {
+      if (!close && b++ === 0) bAt = out.length;
+      if (close && b > 0 && --b === 0 && out.length > bAt) bold.push([bAt, out.length]);
+    } else if (tag === 'i' || tag === 'em') {
+      if (!close && it++ === 0) iAt = out.length;
+      if (close && it > 0 && --it === 0 && out.length > iAt) ital.push([iAt, out.length]);
+    }
+  }
+  out += s.slice(last);
+  if (b > 0 && out.length > bAt) bold.push([bAt, out.length]);
+  if (it > 0 && out.length > iAt) ital.push([iAt, out.length]);
+  return { text: out, bold: bold, ital: ital };
+}
+
+function plainText_(s) { return rich_(s).text; }
+
+var LIST_RE = new RegExp('\\s+(?=(?:' + LIST_LABELS.slice().sort(function (a, b) { return b.length - a.length; })
+  .map(function (x) { return x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }).join('|') + '):)', 'g');
+
+/** Each parallel list on its own line, but only after the stem's first colon. */
+function breakLists_(text) {
+  var i = text.indexOf(':');
+  if (i < 0) return [text];
+  var tail = text.slice(i + 1).replace(LIST_RE, '\n');
+  return (text.slice(0, i + 1) + tail).split('\n');
+}
+
+// -------------------------------------------------------------- the document
+
+function Guide_(body) {
+  this.body = body;
+  this.fresh = true;
+}
+
+/** A paragraph with spacing and a hanging indent, sizes in points. */
+Guide_.prototype.para = function (runs, f) {
+  f = f || {};
+  var p;
+  if (this.fresh) {
+    p = firstPara_(this.body);
+    this.fresh = false;
+  } else {
+    p = this.body.appendParagraph('');
+  }
+  p.setHeading(DocumentApp.ParagraphHeading.NORMAL)
+    .setAlignment(f.align || DocumentApp.HorizontalAlignment.LEFT)
+    .setLineSpacing(1)
+    .setSpacingBefore(f.before || 0)
+    .setSpacingAfter(f.after === undefined ? 2 : f.after)
+    .setIndentStart(f.indent || 0)
+    .setIndentFirstLine((f.indent || 0) - (f.hang || 0));
+  writeRuns_(p, runs);
+  return p;
+};
+
+Guide_.prototype.heading = function (label, size, before) {
+  return this.para([[label, { bold: true, size: size || 12 }]],
+    { before: before === undefined ? 10 : before, after: 4 });
+};
+
+Guide_.prototype.pageBreak = function () {
+  this.body.appendPageBreak();
+};
+
+/** A table: widths in cm, an optional grey header row, cells as run lists or strings. */
+Guide_.prototype.table = function (widths, header, rows, f) {
+  f = f || {};
+  var all = (header ? [header] : []).concat(rows);
+  var t = this.body.appendTable(all.map(function (r) { return r.map(function () { return ''; }); }));
+  t.setBorderWidth(f.borderless ? 0 : 0.5).setBorderColor(f.borderless ? '#ffffff' : '#000000');
+  widths.forEach(function (w, j) { t.setColumnWidth(j, w * CM); });
+  all.forEach(function (r, i) {
+    r.forEach(function (c, j) {
+      var cell = t.getCell(i, j);
+      cell.setPaddingTop(f.pad || 1).setPaddingBottom(f.pad || 1).setPaddingLeft(4).setPaddingRight(4);
+      var runs = typeof c === 'string' ? [[c, { size: f.size || 8.5 }]] : c;
+      if (header && i === 0) {
+        cell.setBackgroundColor('#e8e8e8');
+        runs = runs.map(function (x) { return [x[0], merge_(x[1], { bold: true })]; });
+      }
+      var p = cell.getChild(0).asParagraph();
+      p.setSpacingBefore(0).setSpacingAfter(0).setLineSpacing(1);
+      writeRuns_(p, runs.map(function (x) { return [x[0], merge_({ size: f.size || 8.5 }, x[1])]; }));
+    });
+  });
+  return t;
+};
+
+/** The empty paragraph a cleared body or footer keeps, or a new one. */
+function firstPara_(container) {
+  if (container.getNumChildren() && container.getChild(0).getType() === DocumentApp.ElementType.PARAGRAPH) {
+    return container.getChild(0).asParagraph();
+  }
+  return container.appendParagraph('');
+}
+
+function merge_(a, b) {
+  var o = {};
+  [a || {}, b || {}].forEach(function (x) { for (var k in x) o[k] = x[k]; });
+  return o;
+}
+
+/** Set a paragraph's text in one go, then style ranges of it. Styling a whole
+ *  run returned by appendText is unreliable: Docs merges neighbouring runs. */
+function writeRuns_(p, runs) {
+  var text = '', marks = [];
+  runs.forEach(function (r) {
+    var rc = rich_(r[0]);
+    var t = rc.text.replace(/\s*\n\s*/g, ' ');
+    marks.push({ s: text.length, e: text.length + t.length, st: r[1] || {}, rc: rc });
+    text += t;
+  });
+  p.setText(text);
+  if (!text.length) return;
+  var tx = p.editAsText();
+  tx.setFontFamily(FONT).setFontSize(9.5).setBold(false).setItalic(false).setForegroundColor('#000000');
+  marks.forEach(function (m) {
+    if (m.e <= m.s) return;
+    var st = m.st, a = m.s, z = m.e - 1;
+    if (st.size && st.size !== 9.5) tx.setFontSize(a, z, st.size);
+    if (st.bold) tx.setBold(a, z, true);
+    if (st.italic) tx.setItalic(a, z, true);
+    if (st.color) tx.setForegroundColor(a, z, st.color);
+    m.rc.bold.forEach(function (x) { if (x[1] > x[0]) tx.setBold(a + x[0], Math.min(z, a + x[1] - 1), true); });
+    m.rc.ital.forEach(function (x) { if (x[1] > x[0]) tx.setItalic(a + x[0], Math.min(z, a + x[1] - 1), true); });
+  });
+}
+
+function renderGuide_(doc, data, text) {
+  var body = doc.getBody();
+  body.clear();
+  body.setPageWidth(612).setPageHeight(792)                      // US Letter
+    .setMarginTop(1.5 * CM).setMarginBottom(1.5 * CM)
+    .setMarginLeft(1.3 * CM).setMarginRight(1.3 * CM);
+  var footer = doc.getFooter() || doc.addFooter();
+  footer.clear();
+  var fp = firstPara_(footer);
+  fp.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+  writeRuns_(fp, [[text.one('Footer'), { size: 8, color: GREY }]]);
+
+  var g = new Guide_(body);
+  g.para([[text.one('Title') || 'MAL Study Guide', { bold: true, size: 20 }]], { after: 1 });
+  g.para([[text.one('Subtitle'), { color: GREY }]], { after: 8 });
+
+  // --- legend
+  g.heading('Category codes', 12, 0);
+  var depth = Math.max.apply(null, LEGEND.map(function (x) { return x[1].length; }));
+  var legend = [];
+  for (var i = 0; i < depth; i++) legend.push(LEGEND.map(function (x) { return x[1][i] || ''; }));
+  g.table([5.3, 4.5, 3.6, 4.1], LEGEND.map(function (x) { return x[0]; }), legend);
+
+  // --- capitals, two columns, alphabetical by city
+  g.heading('State capitals, alphabetically by city', 12);
+  var caps = data.capitals.slice().sort(function (a, b) { return a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0; });
+  var groups = {};
+  caps.forEach(function (c) { var k = c[1].charAt(0).toUpperCase(); (groups[k] = groups[k] || []).push(c[1]); });
+  // A letter marks only the first capital of a run of three or more.
+  function tag(cap) {
+    var k = cap.charAt(0).toUpperCase();
+    return groups[k] && groups[k].length >= 3 && groups[k][0] === cap ? k : '';
+  }
+  var half = Math.ceil(caps.length / 2), capRows = [];
+  for (i = 0; i < half; i++) {
+    var a = caps[i], b = caps[i + half];
+    capRows.push([[[tag(a[1]), { bold: true }]], a[1], a[0],
+      [[b ? tag(b[1]) : '', { bold: true }]], b ? b[1] : '', b ? b[0] : '']);
+  }
+  g.table([0.8, 3.9, 3.0, 0.8, 3.9, 3.1], ['', 'Capital', 'State', '', 'Capital', 'State'], capRows);
+  var big = Object.keys(groups).sort().filter(function (k) { return groups[k].length >= 4; })
+    .map(function (k) { return groups[k].length + ' with ' + k; }).join(', ');
+  var capNote = text.all('Capitals note');
+  if (capNote.length || big) {
+    g.para([[(capNote[0] && capNote[0].Name) || 'Potential questions', { bold: true, size: 8.5 }], [':', { bold: true, size: 8.5 }]], { before: 3, after: 0 });
+    capNote.forEach(function (r) { g.para([[r.Text, { italic: true, size: 8.5 }]], { indent: 0.5 * CM, after: 0 }); });
+    if (big) g.para([['Memorize any group of four or more — ' + big + '.', { italic: true, size: 8.5 }]], { indent: 0.5 * CM, after: 0 });
+  }
+
+  // --- nicknames and mottos: fifty rows, a page of their own
+  g.pageBreak();
+  g.heading('State nicknames and mottos', 12, 0);
+  g.table([3.0, 7.0, 7.5], ['State', 'Nickname(s)', 'Motto'], data.states.map(function (r) {
+    return [r[0], r[1], [[r[2], { italic: true }]]];
+  }), { pad: 0.5 });
+  text.all('States note').forEach(function (r) {
+    g.para([['Note: ' + r.Text, { italic: true, size: 8, color: GREY }]], { before: 2, after: 0 });
+  });
+
+  // --- grammar
+  g.heading('Grammar', 12, 8);
+  text.all('Grammar').forEach(function (r) {
+    g.para([[r.Name, { bold: true }]], { before: 4, after: 1 });
+    if (r.Text) g.para([[r.Text, { size: 9 }]], { indent: 0.5 * CM, after: 1 });
+    if (r.Example) g.para([['e.g.  ' + r.Example, { size: 9, italic: true }]], { indent: 0.5 * CM, after: 2 });
+  });
+  var types = text.all('Sentence type');
+  if (types.length) {
+    g.para([['The four sentence types', { bold: true }]], { before: 6, after: 1 });
+    types.forEach(function (r) {
+      g.para([[r.Name + ' — ', { bold: true, size: 9 }], [r.Text, { size: 9 }]], { indent: 1.0 * CM, hang: 0.5 * CM, after: 0 });
+      if (r.Example) g.para([[r.Example, { size: 9, italic: true }]], { indent: 1.0 * CM, after: 2 });
+    });
+  }
+
+  // --- the twelve verb tenses, as a grid when every name reads "<aspect> <time>"
+  if (data.tenses.length) {
+    g.heading(data.tenses.length === 12 ? 'The twelve verb tenses' : 'The verb tenses', 12, 10);
+    var times = ['Past', 'Present', 'Future'], aspects = [], grid = {}, flat = false;
+    data.tenses.forEach(function (r) {
+      var words = plainText_(r.Tense).trim().split(/\s+/);
+      var t = words.filter(function (w) { return /^(past|present|future)$/i.test(w); });
+      if (t.length !== 1) { flat = true; return; }
+      var time = t[0].charAt(0).toUpperCase() + t[0].slice(1).toLowerCase();
+      var aspect = words.filter(function (w) { return w !== t[0]; }).join(' ').toLowerCase() || 'simple';
+      if (aspects.indexOf(aspect) < 0) aspects.push(aspect);
+      var key = aspect + '|' + time;
+      if (grid[key]) flat = true;
+      grid[key] = r;
+    });
+    if (!flat) {
+      var patterns = {};
+      text.all('Tense pattern').forEach(function (r) { patterns[r.Name.toLowerCase()] = r.Text; });
+      var trows = [];
+      aspects.forEach(function (asp) {
+        var cell = function (time, field, st) {
+          var r = grid[asp + '|' + time];
+          return [[r ? r[field] : '', st || {}]];
+        };
+        trows.push([[[asp.toUpperCase(), { bold: true }], [patterns[asp] ? '  ' + patterns[asp] : '', { size: 8, color: GREY }]]]
+          .concat(times.map(function (t) { return cell(t, 'Meaning'); })));
+        trows.push([[['Formula', { italic: true, color: GREY }]]].concat(times.map(function (t) { return cell(t, 'Formula', { italic: true }); })));
+        trows.push([[['Example', { italic: true, color: GREY }]]].concat(times.map(function (t) { return cell(t, 'Example'); })));
+      });
+      g.table([3.4, 5.1, 5.1, 5.2], [''].concat(times), trows);
+    } else {
+      data.notes.push('A verb tense name does not read like “Past perfect”, so the tenses print as a list, not a grid.');
+      g.table([4.0, 3.8, 5.0, 6.0], ['Tense', 'Formula', 'Example', 'Meaning'], data.tenses.map(function (r) {
+        return [[[r.Tense, { bold: true }]], [[r.Formula, { italic: true }]], r.Example, r.Meaning];
+      }));
+    }
+  }
+
+  // --- tip-offs
+  g.heading('Tip-off questions', 12, 12);
+  text.all('Tip-offs note').forEach(function (r) {
+    g.para([[r.Text, { italic: true, size: 8.5, color: GREY }]], { after: 4 });
+  });
+  g.table([1.0, 12.4, 5.5], null, data.tips.map(function (r, i) {
+    return [[[(i + 1) + '.', { bold: true }]], r[0], [[r[1], { bold: true }]]];
+  }), { borderless: true, size: 9, pad: 1.5 });
+
+  // --- the questions, a page break before each quarter
+  data.quarters.forEach(function (q) {
+    g.pageBreak();
+    g.heading('Quarter ' + q.n, 14, 0);
+    q.items.forEach(function (x) {
+      var lines = breakLists_(x.q);
+      lines.forEach(function (line, j) {
+        var runs = [];
+        if (j === 0) {
+          runs.push([x.n + '.  ', { bold: true, size: 9, color: GREY }]);
+          runs.push([x.code + '  ', { bold: true, size: 9 }]);
+        }
+        runs.push([line, { size: 10 }]);
+        if (j === lines.length - 1) runs.push(['  (' + x.a + ')', { bold: true, size: 10 }]);
+        g.para(runs, j === 0 ? { indent: 1.5 * CM, hang: 1.5 * CM, after: lines.length > 1 ? 0 : 3 }
+          : { indent: 1.5 * CM, after: j === lines.length - 1 ? 3 : 0 });
+      });
+    });
+  });
+
+  // --- mythology flows on from the last quarter: no near-empty final sheet
+  if (data.myth.length) {
+    g.heading('Mythology', 12, 8);
+    g.table([7.0, 5.0, 5.5], ['Domain', 'Greek', 'Roman'], data.myth, { pad: 0.5 });
+    text.all('Mythology note').forEach(function (r) {
+      g.para([['Note: ' + r.Text, { italic: true, size: 8, color: GREY }]], { before: 2, after: 0 });
+    });
+  }
 }

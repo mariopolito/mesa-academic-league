@@ -15,13 +15,17 @@ Every question, hint and wrong answer lives in a Google Sheet. Editors choose
 writes it into `mal.html` and rebuilds `index.html`. If something in the sheet
 is wrong, nothing is published and the sheet shows which tab and row to fix.
 
+**Study site → Regenerate study guide** rebuilds the printable study guide from
+the same tabs, as a Google Doc owned by whoever first ran it. It never touches
+this repo: the guide stays in Google Drive.
+
 | Path | What it is |
 |---|---|
 | `index.html` | The built page. Generated — don't edit. |
 | `mal.html` | The page source. Its content tables are generated from the sheet; everything else is code. |
 | `content/content.json` | The sheet's last publish: one row per line, so the history shows exactly which cells changed. |
 | `content/schema.json` | The tabs and columns the sheet is laid out with. |
-| `sheet/Code.gs` | The sheet's Apps Script (the Study site menu). |
+| `sheet/Code.gs` | The sheet's Apps Script (the Study site menu, and the study guide builder). |
 | `tools/content.py` | Sheet ⇄ page conversion and every validation rule. |
 | `tools/interactions.py` | Turns list and matching answer keys into boards. |
 | `build.py` | Wraps `mal.html` into `index.html`. |

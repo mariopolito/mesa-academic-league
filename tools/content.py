@@ -185,6 +185,10 @@ README = [
     "",
     "Text can use <b>bold</b> and <em>italics</em>.",
     "",
+    "Study site > Regenerate study guide rewrites the printable study guide, a",
+    "Google Doc, from this sheet. Its grammar notes, footnotes and title are on",
+    "the Study guide text tab, which only the study guide reads.",
+    "",
     "Study site > Pull content from site replaces everything in this sheet",
     "with what is on the site. Only use it when asked to.",
 ]
