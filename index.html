@@ -3175,7 +3175,7 @@ function buzzNext(){
   const pool=set.build();
   if(!pool.length){
     clearInterval(B.t);
-    $("#bSubj").textContent=set.n;$("#bLvl").textContent="\u2014";$("#bTimer").textContent="\u2014";
+    $("#bSubj").textContent=htmlText(set.n);$("#bLvl").textContent="\u2014";$("#bTimer").textContent="\u2014";
     $("#bQ").innerHTML="Nothing in <b>"+set.n+"</b> for the quarters and levels you have selected. "
       +"Widen them, or pick another set \u2014 the memorize sets are not filed by quarter.";
     $("#bA").hidden=true;$("#bFoot").innerHTML="";
@@ -3463,9 +3463,14 @@ function loadDeck(){
   if(!C.list.length){deckDone(false);return;}
   showCard();
 }
+/* Deck and set names are written as HTML for the chips ("Latin &amp; Greek
+   roots", "Greek &rarr; Roman gods"). Anywhere one goes in as textContent it
+   has to be decoded first, or the entity is printed literally. A function
+   declaration, so it is usable before this point in the script runs. */
+function htmlText(h){const d=document.createElement("div");d.innerHTML=h;return d.textContent;}
 function cardPos(){
   const done=C.full.filter(c=>isMast(c[4])).length;
-  $("#cPos").textContent=`Card ${C.i+1} of ${C.list.length} \u00b7 ${DECKS[C.deck].n}`
+  $("#cPos").textContent=`Card ${C.i+1} of ${C.list.length} \u00b7 ${htmlText(DECKS[C.deck].n)}`
     +(done?` \u00b7 ${done} mastered`:"");
 }
 /* Only the mastery chrome, so a card the student is part-way through reading
