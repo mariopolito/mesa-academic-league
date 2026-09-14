@@ -76,6 +76,8 @@ def col(h, w=120, **kw):
 
 WRONG_NOTE = ("Three believable wrong answers, used for multiple choice. Fill all "
               "three or leave all three blank.")
+BOARD_WRONG_NOTE = ("Quiz wrong answers for the Right side. Fill all three, or leave all "
+                    "three blank to borrow from the board's other pairs.")
 TABS = [
     ("Questions", [
         col("ID", 64, lock=True, autoid="q",
@@ -161,6 +163,11 @@ TABS = [
                                  "on a pair is keyed to it."),
         col("Board name", 170), col("Left heading", 110), col("Right heading", 130),
         col("Left", 200, wrap=True), col("Right", 320, wrap=True),
+        col("Hint", 300, wrap=True,
+            note="On the flashcard. Nudge toward the Right side without saying it."),
+        col("Wrong answer 1", 220, wrap=True, note=BOARD_WRONG_NOTE),
+        col("Wrong answer 2", 220, wrap=True, note=BOARD_WRONG_NOTE),
+        col("Wrong answer 3", 220, wrap=True, note=BOARD_WRONG_NOTE),
     ]),
 ]
 README = [
@@ -276,8 +283,11 @@ def to_tabs(t):
 
     rows = [[c["h"] for c in dict(TABS)["Memorize boards"]]]
     for key, b in t["BOARDS"]:
-        for left, right in b["pairs"]:
-            rows.append([key, unentity(b["name"]), b["l"], b["r"], left, right])
+        for p in b["pairs"]:
+            hint = p[2] if len(p) > 2 else ""
+            wrong = p[3] if len(p) > 3 else ["", "", ""]
+            rows.append([key, unentity(b["name"]), b["l"], b["r"], unentity(p[0]),
+                         unentity(p[1]), hint, wrong[0], wrong[1], wrong[2]])
     tabs["Memorize boards"] = rows
     return tabs
 
@@ -646,7 +656,17 @@ def from_tabs(tabs, catcode, rep):
         for h, k in (("Board name", "name"), ("Left heading", "l"), ("Right heading", "r")):
             if c[h] != b[k]:
                 rep.error(w, '%s differs from row %d of the same board ("%s")' % (h, b["row"], b[k]))
-        b["pairs"].append([c["Left"], c["Right"]])
+        # [left, right] plus, when written, the flashcard hint and the quiz's
+        # three wrong answers. Every reader of a pair takes p[0] and p[1] only.
+        pair = [c["Left"], c["Right"]]
+        wrong = wrongs(c, W, c["Right"], w, rep)
+        if c["Hint"] and same(c["Hint"], c["Right"]):
+            rep.warn(w, "the Hint is the same as the Right side")
+        if wrong:
+            pair += [c["Hint"], wrong]
+        elif c["Hint"]:
+            pair.append(c["Hint"])
+        b["pairs"].append(pair)
     for key, b in boards.items():
         w = "Memorize boards (%s)" % key
         if not b["name"] or not b["l"] or not b["r"]:
@@ -658,8 +678,11 @@ def from_tabs(tabs, catcode, rep):
             dup = sorted({v for v in vals if vals.count(v) > 1})
             if dup:
                 rep.error(w, '%s "%s" appears twice, so the board can\'t be solved' % (side, dup[0]))
+    # sheet:1 marks a board typed into this tab, which the page gives its own
+    # flashcard deck and quiz set; the boards built from other tabs have those
+    # already.
     t["BOARDS"] = [(k, {"name": html.escape(b["name"], quote=False), "l": b["l"], "r": b["r"],
-                        "pairs": b["pairs"]}) for k, b in boards.items()]
+                        "sheet": 1, "pairs": b["pairs"]}) for k, b in boards.items()]
     return t
 
 

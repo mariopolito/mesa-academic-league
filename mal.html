@@ -1939,12 +1939,12 @@ const MATCHSETS={
   caps:{name:"State &rarr; Capital",l:"State",r:"Capital",pairs:CAPS.map(x=>[x[0],x[1]])},
   nick:{name:"State &rarr; Nickname",l:"State",r:"Nickname",pairs:STATES.map(x=>[x[0],x[1].split(",")[0].split(" / ")[0]])},
   motto:{name:"State &rarr; Motto",l:"State",r:"Motto",pairs:STATES.map(x=>[x[0],x[2].split(" / ")[0]])},
-  roots:{name:"Latin &amp; Greek roots",l:"Root",r:"Meaning",pairs:[["mar","sea or ocean"],["super","above / higher"],["ver","true or truth"],["tox","poison / deadly"],["intro-","looking inward"],["retro-","looking backward"],["quadru-","four"],["bi-","two"],["centi-","hundred"],["milli-","thousand"],["-pede","foot"],["sub-","under"]]},
-  sci:{name:"Science terms",l:"Term",r:"Definition",pairs:[["mutualism","Both organisms benefit"],["commensalism","One benefits, the other is unaffected"],["parasitism","One benefits, the other is harmed"],["meiosis","One cell divides twice into four cells"],["sublimation","Solid straight to gas"],["inertia","Newton's First Law"],["reflection","Waves bounce off a barrier"],["refraction","Waves bend passing into a new medium"],["natural selection","Beneficial traits survive and spread"],["artificial selection","Humans breed for useful traits"],["low-silica lava","Thin and runny"],["high-silica lava","Very thick"]]},
+  roots:{name:"Latin &amp; Greek roots",l:"Root",r:"Meaning",sheet:1,pairs:[["mar","sea or ocean","Marine animals live here, and a submarine travels through it.",["land or earth","sky or air","river or stream"]],["super","above / higher","Superman flies over the city, never under it.",["below / lower","beside / near","inside / within"]],["ver","true or truth","A jury's verdict, and a fact you can verify.",["false or lie","turn or change","speech or word"]],["tox","poison / deadly","Why a toxic spill is dangerous to touch.",["sickness / disease","burning / fire","smell / odor"]],["intro-","looking inward","An introvert recharges by spending time alone with their thoughts.",["looking outward","looking backward","looking forward"]],["retro-","looking backward","Retro fashion brings back styles from decades ago.",["looking forward","looking inward","looking upward"]],["quadru-","four","A quadruped walks on all its legs. Count a dog's.",["three","five","eight"]],["bi-","two","Count the wheels on a bicycle.",["one","three","half"]],["centi-","hundred","A century is this many years.",["ten","thousand","million"]],["milli-","thousand","A millennium is this many years.",["hundred","million","ten"]],["-pede","foot","A pedestrian gets around on these.",["hand","wing","head"]],["sub-","under","A subway runs where, compared with the street?",["over","beside","through"]]]},
+  sci:{name:"Science terms",l:"Term",r:"Definition",sheet:1,pairs:[["mutualism","Both organisms benefit","Bees get nectar, and the flowers get pollinated.",["One benefits, the other is unaffected","One benefits, the other is harmed","Both organisms are harmed"]],["commensalism","One benefits, the other is unaffected","A barnacle rides along on a whale, and the whale never notices.",["Both organisms benefit","One benefits, the other is harmed","Neither organism is affected"]],["parasitism","One benefits, the other is harmed","Think of a tick feeding on a dog.",["Both organisms benefit","One benefits, the other is unaffected","Both organisms are harmed"]],["meiosis","One cell divides twice into four cells","It makes sex cells, each with half the usual chromosomes.",["One cell divides once into two cells","Two cells fuse into one cell","One cell divides three times into eight"]],["sublimation","Solid straight to gas","The fog that pours off dry ice skips a step.",["Gas straight to solid","Liquid straight to gas","Solid straight to liquid"]],["inertia","Newton's First Law","A ball keeps rolling until something stops it. Which of Newton's laws is that?",["Newton's Second Law","Newton's Third Law","Newton's Law of Gravity"]],["reflection","Waves bounce off a barrier","A mirror, or an echo off a canyon wall.",["Waves bend passing into a new medium","Waves spread around a barrier","Waves pass straight through a barrier"]],["refraction","Waves bend passing into a new medium","Why a straw looks broken in a glass of water.",["Waves bounce off a barrier","Waves spread out around an obstacle","Waves combine into a bigger wave"]],["natural selection","Beneficial traits survive and spread","Darwin's idea: the environment does the choosing.",["Humans breed for useful traits","Every trait is passed on equally","Organisms change their traits on purpose"]],["artificial selection","Humans breed for useful traits","Dog breeders and farmers do the choosing.",["Beneficial traits survive and spread","Traits change at random over time","Organisms choose their own traits"]],["low-silica lava","Thin and runny","Hawaii's lava pours out gently in long rivers.",["Very thick","Thick and sticky","Solid and cold"]],["high-silica lava","Very thick","It traps gas and blows apart, like Mount St. Helens.",["Thin and runny","Very runny","Watery and fast"]]]},
   tense:{name:"Verb tense formulas",l:"Tense",r:"Formula",pairs:TENSES.map(t=>[t[0],t[1]])},
   myth:{name:"Greek &rarr; Roman gods",l:"Greek",r:"Roman",pairs:MYTH.filter(m=>m.g!==m.r).map(m=>[m.g,m.r])},
   mythd:{name:"God &rarr; Domain",l:"Greek god",r:"Rules over",pairs:MYTH.map(m=>[m.g,m.d])},
-  econ:{name:"Economics &amp; civics",l:"Term",r:"What it means",pairs:[["supply","How much producers will make at different prices"],["scarcity","Unlimited wants exceed limited resources"],["entrepreneur","Organizes and takes the risks of a business"],["eminent domain","Government takes private property with fair payment"],["private property","Owned by people or companies, not government"],["loan","Borrowed money repaid with interest"],["executive branch","Carries out the laws"],["legislative branch","Writes the laws"],["judicial branch","Interprets the laws"],["Redcoats","British soldiers in the Revolutionary War"],["November","Month of Congressional elections"],["Georgia &amp; Alabama","Florida's northern neighbors"]]}
+  econ:{name:"Economics &amp; civics",l:"Term",r:"What it means",sheet:1,pairs:[["supply","How much producers will make at different prices","Demand is the buyers' half of a market. This is the sellers' half.",["How much buyers want at different prices","The price where buyers and sellers agree","How much a business earns after its costs"]],["scarcity","Unlimited wants exceed limited resources","There is never enough of everything for everyone.",["Limited wants exceed unlimited resources","Prices rise across the whole economy","A product sells out for a short time"]],["entrepreneur","Organizes and takes the risks of a business","Someone who starts their own company.",["Owns shares of a company's stock","Works for wages at someone else's business","Buys goods and services for personal use"]],["eminent domain","Government takes private property with fair payment","How a city can build a highway through someone's land.",["Government seizes property with no payment","Owners can refuse any government purchase","Property goes to the state when no heir exists"]],["private property","Owned by people or companies, not government","Your house, your bike, a store's building.",["Owned by the government for everyone's use","Shared equally by everyone in a community","Rented from the government for a fee"]],["loan","Borrowed money repaid with interest","What a bank gives you to help buy a car.",["Money earned on a savings account","Money given that is never repaid","Money set aside for emergencies"]],["executive branch","Carries out the laws","The President leads it.",["Writes the laws","Interprets the laws","Votes on the laws"]],["legislative branch","Writes the laws","Congress: the Senate and the House of Representatives.",["Carries out the laws","Interprets the laws","Enforces the laws"]],["judicial branch","Interprets the laws","The Supreme Court sits at the top of it.",["Writes the laws","Carries out the laws","Enforces the laws"]],["Redcoats","British soldiers in the Revolutionary War","Named for the color of their uniforms.",["American soldiers in the Revolutionary War","German soldiers hired by the British","French soldiers who helped the colonists"]],["November","Month of Congressional elections","Election Day is the Tuesday after this month's first Monday.",["Month the President is sworn in","Month a new Congress first meets","Month federal taxes are due"]],["Georgia & Alabama","Florida's northern neighbors","Look straight up from the Florida panhandle on a map.",["Louisiana's eastern neighbors","Kentucky's northern neighbors","Arizona's eastern neighbors"]]]}
 };
 
 /* Hand-written distractors, keyed by the correct answer.
@@ -3320,9 +3320,29 @@ const cardsMyth =()=>MYTH.map(m=>[
   m.h||(squash(m.n).includes(squash(m.r))?"":m.n),
   "myth:"+m.g]);
 
+/* The boards typed into the sheet's Memorize boards tab carry sheet:1, and
+   each gets a deck here and a quiz set below -- so a board added in the sheet
+   turns up in all three places with no code. The boards built from other
+   tabs (capitals, nicknames, gods...) already have decks of their own.
+   A pair is [left, right, hint?, wrong answers?]; the card id is the same one
+   the matching board records, so a pair is one item wherever it is drilled. */
+const sheetBoards=()=>Object.keys(MATCHSETS).filter(k=>MATCHSETS[k].sheet);
+const boardHint=right=>{
+  const words=right.split(/\s+/).filter(Boolean).length;
+  return "It starts with \u201c"+right[0].toUpperCase()+"\u201d"+(words>1?" and runs "+words+" words.":".");
+};
+const cardsBoard=k=>{
+  const b=MATCHSETS[k];
+  return b.pairs.map(p=>[
+    '<span class="cluelabel">'+b.l+'</span><b>'+p[0]+'</b> \u2014 what does it mean?',
+    p[1],plain(b.name),p[2]||boardHint(p[1]),msetId(k,p[0])]);
+};
+const cardsBoards=()=>[].concat(...sheetBoards().map(cardsBoard));
+
 const DECKS={
   every:{n:"Everything",g:"mix",lv:1,build:()=>shuffle([].concat(
-    cardsQ(),cardsCap(),cardsNick(),cardsMotto(),cardsSpell(),cardsTense(),cardsMyth(),cardsTip()))},
+    cardsQ(),cardsCap(),cardsNick(),cardsMotto(),cardsSpell(),cardsTense(),cardsMyth(),cardsTip(),
+    cardsBoards()))},
   all:{n:"All subjects",g:"subj",lv:1,build:()=>cardsQ()},
   MA:{n:"Math",g:"subj",lv:1,build:()=>cardsQ("MA")},
   SC:{n:"Science",g:"subj",lv:1,build:()=>cardsQ("SC")},
@@ -3337,6 +3357,7 @@ const DECKS={
   tense:{n:"Verb tenses",g:"set",build:cardsTense},
   myth:{n:"Mythology",g:"set",build:cardsMyth}
 };
+sheetBoards().forEach(k=>{DECKS["mb-"+k]={n:MATCHSETS[k].name,g:"set",build:()=>cardsBoard(k)};});
 const C={deck:"all",l:[],i:0,list:[],full:[],hide:!!ST.cardHide};
 const deckChips=g=>Object.entries(DECKS).filter(([k,d])=>d.g===g)
   .map(([k,d])=>`<button class="chip" data-v="${k}" aria-pressed="${k===C.deck}">${d.n}</button>`).join("");
@@ -3598,6 +3619,17 @@ function qsBlanks(subj){
   return out;
 }
 
+/* The sheet writes three wrong answers per pair. A pair left blank borrows
+   them from its own board, closest in length first, so the shape of an option
+   still says nothing -- and a board has at least four pairs, so there are
+   always three to borrow. */
+function qsBoard(k){
+  const b=MATCHSETS[k],rights=b.pairs.map(p=>p[1]);
+  const ask=/^[A-Za-z]+$/.test(b.r)?"Which "+b.r.toLowerCase():"Which of these";
+  return b.pairs.map(p=>qItem(ask+" goes with \u201c"+p[0]+"\u201d?",p[1],
+    p[3]&&p[3].length===3?p[3].slice():others(likeLength(rights,p[1]),p[1]),
+    plain(b.name),"This goes with \u201c"+p[0]+".\u201d",null,msetId(k,p[0])));
+}
 function qsMyth(){
   const out=[];
   MYTH.forEach(m=>{
@@ -3795,6 +3827,7 @@ const QSETS={
   tense:{n:"Verb tenses",     g:"set",build:qsTense},
   myth :{n:"Mythology",       g:"set",build:qsMyth}
 };
+sheetBoards().forEach(k=>{QSETS["mb-"+k]={n:MATCHSETS[k].name,g:"set",build:()=>qsBoard(k)};});
 const refSets=()=>Object.keys(QSETS).filter(k=>QSETS[k].build);
 
 const QZ={l:[],deck:"all",set:[],i:0,right:0,n:10};

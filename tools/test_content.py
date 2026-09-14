@@ -208,6 +208,40 @@ expect("board ID taken by a built-in board",
        errors=['Board ID "caps" is taken'])
 
 
+expect("board pair with two of three wrong answers",
+       set_cell("Memorize boards", 1, "Wrong answer 3", ""),
+       errors=["fill all three wrong answers or none (2 filled)"])
+expect("board wrong answer equal to the right side",
+       set_cell("Memorize boards", 1, "Wrong answer 1", "Sea or ocean"),
+       errors=['wrong answer "Sea or ocean" is the same as the right answer'])
+
+
+def board_blank_wrongs(tabs):
+    B = tabs["Memorize boards"]
+    for h in ("Wrong answer 1", "Wrong answer 2", "Wrong answer 3"):
+        B[1][B[0].index(h)] = ""
+
+
+def check_blank_wrongs(t):
+    p = dict(t["BOARDS"])["roots"]["pairs"][0]
+    assert p[:2] == ["mar", "sea or ocean"] and len(p) == 3 and p[2], p
+
+
+expect("board pair with no wrong answers keeps its hint and borrows on the page",
+       board_blank_wrongs, check=check_blank_wrongs)
+
+
+def check_written(t):
+    b = dict(t["BOARDS"])["roots"]
+    assert b["sheet"] == 1, b
+    p = b["pairs"][0]
+    assert len(p) == 4 and len(p[3]) == 3 and p[2], p
+
+
+expect("typed boards carry sheet:1, a hint and three wrong answers",
+       lambda tabs: None, check=check_written)
+
+
 def tip_gap(tabs):
     del tabs["Tip-offs"][3]
 

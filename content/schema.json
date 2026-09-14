@@ -416,6 +416,30 @@
      "h": "Right",
      "w": 320,
      "wrap": true
+    },
+    {
+     "h": "Hint",
+     "w": 300,
+     "wrap": true,
+     "note": "On the flashcard. Nudge toward the Right side without saying it."
+    },
+    {
+     "h": "Wrong answer 1",
+     "w": 220,
+     "wrap": true,
+     "note": "Quiz wrong answers for the Right side. Fill all three, or leave all three blank to borrow from the board's other pairs."
+    },
+    {
+     "h": "Wrong answer 2",
+     "w": 220,
+     "wrap": true,
+     "note": "Quiz wrong answers for the Right side. Fill all three, or leave all three blank to borrow from the board's other pairs."
+    },
+    {
+     "h": "Wrong answer 3",
+     "w": 220,
+     "wrap": true,
+     "note": "Quiz wrong answers for the Right side. Fill all three, or leave all three blank to borrow from the board's other pairs."
     }
    ]
   }
