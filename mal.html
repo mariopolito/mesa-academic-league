@@ -4088,12 +4088,43 @@ const BONUSSUB={
   spell:"Meaning &rarr; word",
   tip  :"Tip-off round"
 };
+/* A memorize board runs the other way round here from the quiz: the clue is
+   the meaning and the response names the term -- "This root means 'sea or
+   ocean.'" / "What is mar?" -- because a response is something you can put
+   "What is" in front of, and "What is sea or ocean?" is not. So the sheet's
+   written wrong answers, which are meanings, don't fit; the board's other
+   terms do, and ones sharing a word with the answer come first, so the three
+   branches of government face each other and the two lavas do. */
+function jBoard(k){
+  const b=MATCHSETS[k],lefts=b.pairs.map(p=>p[0]),what=b.l.toLowerCase();
+  const words=t=>t.toLowerCase().split(/[\s-]+/).filter(w=>w&&!/^(the|a|an|of|and|or|&)$/.test(w));
+  /* A lone capital ("November" among lower-case terms) or a lone hyphen
+     ("mar" among prefixes) picks the answer out without knowing anything, so
+     wrong answers of the same shape come next. */
+  const shape=t=>(/^[A-Z]/.test(t)?"C":"l")+(/^-/.test(t)?"<":"")+(/-$/.test(t)?">":"");
+  return b.pairs.map(p=>{
+    const mine=words(p[0]);
+    const rest=lefts.filter(x=>x!==p[0]);
+    const kin=shuffle(rest.filter(x=>words(x).some(w=>mine.includes(w))));
+    const alike=shuffle(rest.filter(x=>shape(x)===shape(p[0])));
+    return qItem("Which "+what+" means \u201c"+p[1]+"\u201d?",p[0],
+      others(kin.concat(alike,likeLength(lefts,p[0])),p[0]),plain(b.name),
+      "This "+what+" means \u201c"+p[1]+".\u201d",null,msetId(k,p[0]));
+  });
+}
+const BONUSBUILD={};
+sheetBoards().forEach(k=>{
+  const b=MATCHSETS[k],key="mb-"+k;
+  BONUSDECKS.push(key);
+  BONUSBUILD[key]=()=>jBoard(k);
+  BONUSSUB[key]=(/^[A-Za-z]+$/.test(b.r)?b.r:"Meaning")+" &rarr; "+b.l.toLowerCase();
+});
 function buildBonusBoard(){
   return BONUSDECKS.map(key=>{
     const set=QSETS[key];
-    const items=shuffle(set.build()).filter(x=>x.d&&x.d.length>=3);
+    const items=shuffle((BONUSBUILD[key]||set.build)()).filter(x=>x.d&&x.d.length>=3);
     const cells=[0,1,2].map(i=>({level:i+1,value:JVALS[i],items:items[i]?[items[i]]:[],done:null}));
-    return {name:set.n,code:BONUSSUB[key]||"",ref:true,cells};
+    return {name:plain(set.n),code:BONUSSUB[key]||"",ref:true,cells};
   }).filter(col=>col.cells.some(c=>c.items.length));
 }
 
@@ -4266,7 +4297,10 @@ const NUM_START=/^([\d$(−.-]|(?:one|two|three|four|five|six|seven|eight|nine|t
 const CATQWORD={Mythology:"Who",Capitals:"Where","Verb tenses":"What",Vocabulary:"What"};
 /* Exact-answer-text patches for cases the heuristics below get wrong --
    keyed by the raw answer string, e.g. ANSWER_OVERRIDES["White Fang"]="What". */
-const ANSWER_OVERRIDES={};
+const ANSWER_OVERRIDES={Redcoats:"Who"};
+/* Answers that take "the" and that no rule above can see: "Who are the
+   Redcoats?", "What is the judicial branch?" */
+const THE_OK=new Set(["executive branch","legislative branch","judicial branch","Redcoats"]);
 /* Unwrap rather than delete -- "(George S.) Ohm" needs to read as
    "George S. Ohm" for the name check, not lose the parenthetical part
    entirely and be left with just "Ohm". */
@@ -4275,7 +4309,7 @@ const isCaseCitation=a=>/\sv\.?\s/.test(a);
 /* "Boston and Austin", "Kansas, Nebraska" -- a joined list is a place only
    if every member of it is. */
 function allPartsArePlaces(bare){
-  const parts=bare.split(/\s*(?:,|\band\b)\s*/i).map(s=>s.trim()).filter(Boolean);
+  const parts=bare.split(/\s*(?:,|&|\band\b)\s*/i).map(s=>s.trim()).filter(Boolean);
   if(parts.length<2)return false;
   return parts.every(p=>STATE_NAMES.has(p)||CAPITAL_NAMES.has(p));
 }
@@ -4319,7 +4353,7 @@ function qVerb(answer,category){
   if(/^\S+\s+or\s+\S+$/i.test(bare))return"is";
   /* A motto is one thing however many nouns it strings together. */
   if(category==="State mottos"||category==="State nicknames")return"is";
-  if(/\band\b/i.test(bare))return"are";
+  if(/\band\b|&/i.test(bare))return"are";
   /* One comma is a single thing with its state or country after it --
      "Charleston, South Carolina". Two or more is a list. */
   const parts=bare.split(",").length;
@@ -4353,6 +4387,7 @@ function asResponse(answer,category,forced){
        whole answer, not when "of" turns up inside a list. */
     else if(/^[a-z][a-z-]*\s+of\s+/.test(clean)&&!/[,;]/.test(clean))body="the "+clean;
     else if(KNOWN_PLURAL.has(bare)&&/^(Cascades|Rockies|Alps|Andes|Great Lakes|Great Plains)$/.test(bare))body="the "+clean;
+    else if(THE_OK.has(bare))body="the "+clean;
     else if(w==="What"&&needsArticle(bare))body=article(bare)+" "+clean;
   }
   return`${w} ${qVerb(clean,category)} ${body}?`;
