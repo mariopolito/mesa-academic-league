@@ -655,10 +655,14 @@ kbd{
 @keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 
 /* ---------- STATE CONNECTIONS ---------- */
-.conngrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
+.conntitle{
+  text-align:center;font-family:var(--f-ui);font-size:15px;font-weight:800;
+  letter-spacing:.01em;margin:0 0 8px;
+}
+.conngrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:0}
 .conntile{
   background:var(--surface);border:1px solid var(--line);border-radius:8px;
-  min-height:58px;padding:8px 7px;display:flex;align-items:center;justify-content:center;
+  min-height:50px;padding:8px 7px;display:flex;align-items:center;justify-content:center;
   text-align:center;font-family:var(--f-read);font-size:14px;line-height:1.3;overflow-wrap:anywhere;
 }
 .conntile:hover:not(:disabled){border-color:var(--text)}
@@ -4670,10 +4674,11 @@ const CNLABEL={state:"State",cap:"Capital",nick:"Nickname",motto:"Motto"};
    never takes two states whose texts touch each other. Long mottos are left
    out because sixteen tiles have to fit on an 11.6" screen. */
 const cnPool=()=>STATES.map(x=>{
-    const nicks=plain(x[1]).split("/").map(n=>n.trim()).filter(n=>n&&n.length<=26);
-    return {state:x[0],cap:stCap(x[0]),nicks:nicks,nick:pick(nicks.length?nicks:[""]),
-      motto:plain(x[2]).trim()};})
-  .filter(g=>g.cap&&g.nick&&g.motto&&g.motto.length<=54);
+    const cut=(t,max)=>plain(t).split("/").map(n=>n.trim()).filter(n=>n&&n.length<=max);
+    const nicks=cut(x[1],26),mottos=cut(x[2],54);
+    return {state:x[0],cap:stCap(x[0]),nicks:nicks,mottos:mottos,
+      nick:pick(nicks.length?nicks:[""]),motto:pick(mottos.length?mottos:[""])};})
+  .filter(g=>g.cap&&g.nick&&g.motto);
 const cnTexts=g=>CNKINDS.map(k=>g[k].toLowerCase());
 /* Two states that share a nickname never share a board -- "Sunshine State" is
    listed for Florida and New Mexico, and one tile cannot answer to both, however
@@ -4685,9 +4690,12 @@ function cnBoard(){
   const out=[];
   for(const g of shuffle(cnPool())){
     if(out.length===4)break;
-    const mine=cnTexts(g),myNicks=g.nicks.map(n=>n.toLowerCase());
+    const mine=cnTexts(g);
+    const lower=l=>l.map(n=>n.toLowerCase());
+    const myNicks=lower(g.nicks),myMottos=lower(g.mottos);
     const clash=out.some(o=>
       o.nicks.some(n=>myNicks.includes(n.toLowerCase()))
+      ||o.mottos.some(m=>myMottos.includes(m.toLowerCase()))
       ||cnTexts(o).some(t=>mine.some(u=>
         t===u||t.includes(g.state.toLowerCase())||u.includes(o.state.toLowerCase()))));
     if(!clash)out.push(g);
@@ -4699,8 +4707,8 @@ function startConn(){
   CN.tried=new Set();CN.over=false;
   CN.tiles=shuffle([].concat(...CN.groups.map((g,i)=>
     CNKINDS.map(k=>({id:i+":"+k,g:i,t:g[k]})))));
-  renderConn("Pick the four tiles that belong to one state \u2014 the state itself, its capital, "
-    +"its nickname and its motto \u2014 then submit.");
+  renderConn("Every group is one state: the state itself, its capital, its nickname "
+    +"and its motto.");
 }
 function connRow(x){
   const g=CN.groups[x.i];
@@ -4712,11 +4720,12 @@ function renderConn(msg,tone){
   for(let i=0;i<CNMISS;i++)dots.push(`<span class="${i<CN.miss?"used":""}"></span>`);
   const playing=CN.tiles.length&&!CN.over;
   $("#matchArea").innerHTML=`
+    <p class="conntitle">Create four groups of four!</p>
     <div class="connsolved">${CN.solved.map(connRow).join("")}</div>
     ${playing?`<div class="conngrid">${CN.tiles.map(x=>
       `<button class="conntile${CN.sel.includes(x.id)?" sel":""}" data-i="${x.id}">${esc(x.t)}</button>`
       ).join("")}</div>`:""}
-    <p class="hint connmsg ${tone||""}" id="cnMsg" style="margin:14px 0 0">${msg}</p>
+    <p class="hint connmsg ${tone||""}" id="cnMsg" style="margin:10px 0 0">${msg}</p>
     <div class="connbar">
       ${playing?`<span class="connmiss">Mistakes remaining:${dots.join("")}</span>`:"<span></span>"}
       <span class="connbtns">
