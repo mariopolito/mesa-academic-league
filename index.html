@@ -4665,11 +4665,12 @@ function matchClick(b){
    motto. Nothing on a tile says which of the four kinds it is, so the only
    way in is knowing the state -- which is the whole point, and why it reads
    the tables from both ends at once the way the merged decks do.
-   Three strikes ends it: the newspaper's four is generous when a wrong set
-   costs nothing but another guess.
+   Four mistakes, the newspaper's own allowance. Three ended the board too
+   early in play: a tile carries no hint of which kind it is, so the first
+   guess at a state a student half-knows is often wrong.
    ============================================================ */
 const CN={groups:[],tiles:[],sel:[],miss:0,solved:[],bad:new Set(),tried:new Set(),over:false};
-const CNMISS=3;
+const CNMISS=4;
 const CNKINDS=["state","cap","nick","motto"];
 const CNLABEL={state:"State",cap:"Capital",nick:"Nickname",motto:"Motto"};
 
@@ -4731,7 +4732,7 @@ function renderConn(msg,tone){
         ${playing?`<button class="btn ghost small" id="cnShuf">Shuffle</button>
         <button class="btn ghost small" id="cnClear">Deselect all</button>
         <button class="btn small" id="cnGo"${CN.sel.length===4?"":" disabled"}>Submit</button>`:""}
-        <button class="btn ${playing?"ghost ":""}small" id="cnSkip">${playing?"New board":"Another board"}</button>
+        ${playing?"":`<button class="btn small" id="cnSkip">Another board</button>`}
       </span>
     </div>`;
   $("#matchArea").querySelectorAll(".conntile").forEach(b=>b.onclick=()=>cnTap(b.dataset.i));
@@ -4808,7 +4809,7 @@ function cnOut(){
   });
   CN.solved.sort((a,b)=>a.i-b.i);
   CN.tiles=[];CN.sel=[];
-  renderConn("<b>Three strikes.</b> Here are the four states \u2014 the ones you did not get are "
+  renderConn("<b>Out of mistakes.</b> Here are the four states \u2014 the ones you did not get are "
     +"back in your flashcards.","bad");
 }
 
