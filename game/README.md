@@ -48,7 +48,15 @@ and upgrades except `KEEP_UPS` (shop, trading post). **Mastery is never reset.**
 Pays blueprints: `2 × cbrt(run sparks / 1B)` plus one per 10 questions mastered
 for the first time ever (`S.masteredEver`, so nothing pays twice). Each blueprint
 earned adds `BP_BONUS` (5%) to gear output for good; spending them on `PERKS`
-does not remove it.
+does not remove it. Eight perks: Starter kit, Golden touch, Deep toolbox, Warm
+boiler, Time dilation, Shop discount, Sharp trader and Mirror polish (shine up to
+150%, output scaling with it).
+
+**The shop must never pay out.** Shop discount and Sharp trader would let "buy a
+cheap tool, trade it up, sell the result" profit, so `sellFactor()` lowers sale
+prices when either is owned (exactly 0.6 without them). After touching any price,
+re-run the scan: buy-then-sell, buy-trade-sell, and trade loops, for every pair
+of tools and holdings, with each combination of perks. All must come out at zero.
 
 Pacing measured with a simulated student (8 s an answer, 85% right, buying
 everything at once): first rebuild at about 650 answers, then one every

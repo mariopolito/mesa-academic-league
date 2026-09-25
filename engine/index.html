@@ -312,7 +312,13 @@ details.how b{color:var(--text)}
 .rbgo{display:flex;flex-direction:column;gap:8px}
 .rbgo #rbGo{align-self:flex-start;font-size:15px;padding:9px 18px}
 .rbnote{margin:0 0 4px;color:var(--muted);font-size:13px}
-.gear.gilded:not(.locked) svg path:first-child{stroke:var(--spark);stroke-width:1.2}
+.gear.gilded:not(.locked) svg path:first-child{stroke:var(--rim,var(--spark));stroke-width:var(--rimw,1.2)}
+/* Mirror polish: past 100% shine a gear glows in its own colour and shimmers. */
+.gear.mirror svg{filter:drop-shadow(0 0 calc(2px + 7px * var(--over)) var(--gc)) brightness(calc(1.05 + .25 * var(--over)));
+  animation:glint 2.6s ease-in-out infinite}
+@keyframes glint{50%{filter:drop-shadow(0 0 calc(4px + 11px * var(--over)) var(--gc)) brightness(calc(1.15 + .4 * var(--over)))}}
+.bar{position:relative}
+.bar.mk::after{content:"";position:absolute;top:0;bottom:0;left:var(--mark);width:2px;background:rgba(255,255,255,.5)}
 
 /* Reset */
 .reset{border-top:1px solid var(--line);padding-top:10px}
@@ -346,7 +352,7 @@ h3.sec{font:800 18px/1 var(--stencil);letter-spacing:.08em;text-transform:upperc
   .meter b{font-size:32px}
 }
 @media (pointer:coarse){ .opt{min-height:54px} .btn{padding:10px 14px} select{font-size:16px} }
-@media (prefers-reduced-motion:reduce){ .gear svg g,.gear:hover svg{animation:none!important} .float{animation:none;opacity:0} .odbadge,.tool.bump,.opt.tapme,.up.fresh,.toast,.gauge.flash{animation:none} .vent{display:none} .gauge #gNeedle{transition:none} }
+@media (prefers-reduced-motion:reduce){ .gear svg g,.gear:hover svg{animation:none!important} .float{animation:none;opacity:0} .odbadge,.tool.bump,.opt.tapme,.up.fresh,.toast,.gauge.flash,.gear.mirror svg{animation:none} .vent{display:none} .gauge #gNeedle{transition:none} }
 </style>
 </head><body>
 <header class="top"><div class="top-in">
@@ -542,6 +548,9 @@ const PERKS = [
   {id:"box",    name:"Deep toolbox",  cost:3, does:"Your toolbox upgrades survive a rebuild."},
   {id:"boiler", name:"Warm boiler",   cost:4, does:"The pressure gauge never drops below Warm."},
   {id:"time",   name:"Time dilation", cost:4, does:"Buzzer reflexes pays double for answers under 9 seconds, not 5, so there is time to use a hint and still earn it."},
+  {id:"discount", name:"Shop discount", cost:3, does:"Everything in the Tool shop costs 20% less. Sale prices ease a little too, so buying to resell never pays."},
+  {id:"broker", name:"Sharp trader",  cost:3, does:"Better rates at the Trading post: what you give is worth more. Shop sale prices ease a little to match."},
+  {id:"mirror", name:"Mirror polish", cost:5, does:"Shine can climb past 100%, up to 150%, and a gear makes more the brighter it shines."},
 ];
 const runSparks = () => S.tot - (S.runStartTot || 0);
 const allBuilt = () => TOPICS.every(t=>S.w[t.id] && S.w[t.id].n > 0);
@@ -628,8 +637,14 @@ const unit = () => Math.max(50, pps() / odMult() * 30);
 const held = id => S.tools[id] || 0;
 const slotFull = id => held(id) >= toolCap();
 const toolsHeld = () => TOOLS.reduce((a,t)=>a + held(t.id), 0);
-const buyPrice  = id => Math.ceil(unit() * TOOL[id].v * (0.8 + 0.2 * held(id)));
-const sellAt    = (id, h) => Math.floor(unit() * TOOL[id].v * 0.6 / (1 + 0.2 * Math.max(0, h - 1)));
+// Shop discount takes 20% off. Buying at 0.64 and selling at 0.6 at best still never pays.
+const buyPrice  = id => Math.ceil(unit() * TOOL[id].v * (0.8 + 0.2 * held(id)) * (S.perks.discount ? 0.8 : 1));
+const sellAt    = (id, h) => Math.floor(unit() * TOOL[id].v * sellFactor() / (1 + 0.2 * Math.max(0, h - 1)));
+/* A sale pays 0.6 of a tool's worth. Shop discount and Sharp trader would let
+   "buy a cheap tool, trade it up, sell the result" turn a profit, so with
+   either perk a sale pays a little less: 0.6 x discount x (0.9 / trade worth).
+   Without them it is exactly 0.6. The test is that the chain never pays. */
+const sellFactor = () => 0.6 * Math.min(1, (S.perks.discount ? 0.8 : 1) * 0.9 / tradeWorth());
 const sellPrice = id => held(id) > 0 ? sellAt(id, held(id)) : 0;
 /* Trading: how many of tool `a` buy one of tool `b`. Your spare `a`s are worth
    less the more of them you hold, and a `b` costs more the more of it you
@@ -637,7 +652,9 @@ const sellPrice = id => held(id) > 0 ? sellAt(id, held(id)) : 0;
    0.9 where a sale pays 0.6, so trading beats selling and buying. Never less
    than 1 for 1, so a trade can never make tools out of nothing. */
 const tradeRatio = (a, b) => Math.max(1, Math.ceil(
-  (TOOL[b].v * (0.8 + 0.2 * held(b))) / (TOOL[a].v * 0.9 / (1 + 0.2 * Math.max(0, held(a) - 1)))));
+  (TOOL[b].v * (0.8 + 0.2 * held(b))) / (TOOL[a].v * tradeWorth() / (1 + 0.2 * Math.max(0, held(a) - 1)))));
+// What a traded tool is worth, against the shop's 0.6 for a sale. Sharp trader raises it.
+const tradeWorth = () => S.perks.broker ? 1.15 : 0.9;
 
 /* Levels 1-20 cost sparks only. From the 21st on, each level also costs one of
    EVERY tool; from the 31st, two of each; and so on up to eight of each for
@@ -788,7 +805,12 @@ function dur(s){ s=Math.round(s); const h=Math.floor(s/3600), m=Math.floor(s%360
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 function mix(a,b,k){ const p=x=>parseInt(x,16); const c=[1,3,5].map(i=>Math.round(p(a.substr(i,2))*(1-k)+p(b.substr(i,2))*k));
   return "#"+c.map(v=>v.toString(16).padStart(2,"0")).join(""); }
-function shineColor(f, c){ return mix(c || "#d4a94c", RUSTED, Math.min(1,(100-f)/85)); }
+/* Rusting mixes toward brown; shining past 100% (Mirror polish) mixes toward white. */
+function shineColor(f, c){
+  c = c || "#d4a94c";
+  return f > 100 ? mix(c, "#ffffff", Math.min(1, (f - 100) / 50) * .5) : mix(c, RUSTED, Math.min(1, (100 - f) / 85));
+}
+const shineMax = () => S.perks.mirror ? 150 : 100;
 const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function plain(html){ const d=document.createElement("div"); d.innerHTML=html; return d.textContent; }
 
@@ -1062,7 +1084,7 @@ function answer(i){
     if(helped && before < BOXMAX) extra.push(`You had help${CUR.hint ? " (a hint)" : ""}, so this one doesn't count toward mastery.`);
     if(CUR.gold){ st.goldRun++; v += goldenPrize(it, fast); news = true; }
     if(t && own(it.t)){
-      const w = S.w[it.t], was = w.f; w.f = Math.min(100, w.f + (S.ups.polish?35:20));
+      const w = S.w[it.t], was = w.f; w.f = Math.max(w.f, Math.min(shineMax(), w.f + (S.ups.polish?35:20)));
       if(w.f > was + .5) extra.push(`${t.name} polished to ${Math.round(w.f)}% shine.`);
     }
     if(before < BOXMAX && S.box[it.id] === BOXMAX && !S.masteredEver[it.id]){ S.masteredEver[it.id] = 1; S.runNewMastered++; }
@@ -1171,13 +1193,28 @@ function tickGears(){
     const mo = 1 + (S.ups.photo ? 8 : 4) * m;
     const tipM = `Mastery ${Math.round(m*100)}%: ×${mo.toFixed(1)} output, rusts ${(1 + 3*m).toFixed(1)}× slower` +
       ` (at 100%: ×${S.ups.photo ? 9 : 5} output, 4× slower). Answer this topic right without help to raise it.`;
-    const tipF = own(t.id) ? `Shine ${Math.round(w.f)}%: running at ${Math.round(w.f)}% of full speed. Right answers in this topic polish it.`
+    const tipF = own(t.id) ? `Shine ${Math.round(w.f)}%: running at ${Math.round(w.f)}% of full speed. Right answers in this topic polish it` +
+        (S.perks.mirror ? `, up to ${shineMax()}% with Mirror polish.` : ".")
       : "Shine: how polished the gear is. A rusty gear makes less.";
     el.querySelectorAll('[data-tip="m"]').forEach(x=>{ if(x.title !== tipM) x.title = tipM; });
     el.querySelectorAll('[data-tip="f"]').forEach(x=>{ if(x.title !== tipF) x.title = tipF; });
     const f = own(t.id) ? w.f : 0;
-    el.querySelector('[data-k="f"]').style.cssText = `width:${f}%;background:${shineColor(f, LOOK[t.id].c)}`;
-    el.querySelector('[data-k="ft"]').textContent = own(t.id) ? Math.round(f) + "%" : "–";
+    /* With Mirror polish the bar runs to 150%, with a mark at 100%. */
+    const sm = shineMax(), fb = el.querySelector('[data-k="f"]');
+    fb.style.cssText = `width:${Math.min(100, f / sm * 100)}%;background:${shineColor(f, LOOK[t.id].c)}`;
+    fb.parentNode.classList.toggle("mk", sm > 100); fb.parentNode.style.setProperty("--mark", (100 / sm * 100) + "%");
+    el.querySelector('[data-k="ft"]').textContent = own(t.id) ? Math.round(f) + "%" + (f > 100 ? " ✦" : "") : "–";
+    /* Past 100% the gear glows and shimmers, more the brighter it is. */
+    const over = own(t.id) && f > 100.5;
+    el.classList.toggle("mirror", over);
+    if(over) el.style.setProperty("--over", ((f - 100) / 50).toFixed(2));
+    /* A rebuilt gear's gilded rim tracks its shine: dull brown when rusty, bright gold when polished. */
+    if(el.classList.contains("gilded")){
+      const k = Math.min(1, f / 100);
+      const svg = el.querySelector("svg");
+      svg.style.setProperty("--rim", f > 100 ? mix("#ffe9a8", "#ffffff", Math.min(1, (f - 100) / 50) * .6) : mix(RUSTED, "#ffe9a8", k));
+      svg.style.setProperty("--rimw", (0.4 + 1.0 * k + (f > 100 ? .6 * (f - 100) / 50 : 0)).toFixed(2));
+    }
     el.querySelector('[data-k="r"]').textContent = own(t.id) ? fmt(r) + " sparks per second" : "Build it to start earning";
     const p = price(t), k = toolsFor(t), b = el.querySelector("[data-buy]");
     el.classList.toggle("maxed", maxed(t));
@@ -1191,7 +1228,7 @@ function tickGears(){
     el.querySelector("svg").style.color = own(t.id) ? shineColor(w.f, LOOK[t.id].c) : UNBUILT;
     const g = el.querySelector("g");
     el.classList.toggle("idle", !own(t.id));
-    const d = Math.round(4 + 16*(1 - (f-FLOOR)/(100-FLOOR)));   // rustier turns slower
+    const d = Math.max(2, Math.round(4 + 16*(1 - (f-FLOOR)/(100-FLOOR))));   // rustier turns slower; mirror-bright turns faster
     if(g.dataset.d != d){ g.dataset.d = d; g.style.animationDuration = d + "s"; }
   });
 }
@@ -1411,7 +1448,7 @@ $("#rbPerks").addEventListener("click", e=>{
   if(S.perks[k.id] || S.bp < k.cost) return;
   S.bp -= k.cost; S.perks[k.id] = true;
   if(k.id === "boiler") S.psi = Math.max(S.psi, psiMax() / ZONES.length);
-  lastPerks = ""; lastUpSig = ""; save(); paintRebuild(); paintUps(); paintGauge(); checkAch();
+  lastPerks = ""; lastUpSig = ""; lastShop = ""; lastGearSig = ""; save(); paintRebuild(); paintUps(); paintGauge(); paintAll(); checkAch();
 });
 
 /* ---------- the tool shop ---------- */
