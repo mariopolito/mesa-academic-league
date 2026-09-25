@@ -1,4 +1,5 @@
 <title>Knowledge Engine</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='1 1 22 22'%3E%3Cpath d='M12.0 4.8L13.4 2.1L15.2 2.5L15.3 5.6L17.1 6.9L20.0 6.0L21.0 7.6L18.8 9.8L19.2 12.0L21.9 13.4L21.5 15.2L18.4 15.3L17.1 17.1L18.0 20.0L16.4 21.0L14.2 18.8L12.0 19.2L10.6 21.9L8.8 21.5L8.7 18.4L6.9 17.1L4.0 18.0L3.0 16.4L5.2 14.2L4.8 12.0L2.1 10.6L2.5 8.8L5.6 8.7L6.9 6.9L6.0 4.0L7.6 3.0L9.8 5.2Z M15 12A3 3 0 1 0 9 12A3 3 0 1 0 15 12Z' fill='%23d4a94c' fill-rule='evenodd' stroke='%233a2c10' stroke-width='.8' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil+Display:wght@700;800&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil:wght@700;800&display=swap">
@@ -187,6 +188,7 @@ details.how b{color:var(--text)}
 /* Each gear's hover move. It plays once each time the pointer arrives. The
    move is on the <svg>, the turning is on the <g> inside it, so they combine. */
 .gear svg{transform-origin:50% 50%}
+.gear.locked:hover svg{animation:none!important}   /* unbuilt gears sit still */
 .gear:hover svg.hv-spin{animation:hvSpin .7s ease-out}
 .gear:hover svg.hv-ticktock{animation:hvTick .9s ease-in-out}
 .gear:hover svg.hv-bounce{animation:hvBounce .7s ease-out}
