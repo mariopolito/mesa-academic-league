@@ -4659,7 +4659,7 @@ function matchClick(b){
    Three strikes ends it: the newspaper's four is generous when a wrong set
    costs nothing but another guess.
    ============================================================ */
-const CN={groups:[],tiles:[],sel:[],miss:0,solved:[],bad:new Set(),over:false};
+const CN={groups:[],tiles:[],sel:[],miss:0,solved:[],bad:new Set(),tried:new Set(),over:false};
 const CNMISS=3;
 const CNKINDS=["state","cap","nick","motto"];
 const CNLABEL={state:"State",cap:"Capital",nick:"Nickname",motto:"Motto"};
@@ -4668,24 +4668,34 @@ const CNLABEL={state:"State",cap:"Capital",nick:"Nickname",motto:"Motto"};
    Oklahoma City), and "Sunshine State" is listed for two states, so a board
    never takes two states whose texts touch each other. Long mottos are left
    out because sixteen tiles have to fit on an 11.6" screen. */
-const cnPool=()=>STATES.map(x=>({state:x[0],cap:stCap(x[0]),
-    nick:plain(x[1]).split(/[,\/]/)[0].trim(),motto:plain(x[2]).trim()}))
-  .filter(g=>g.cap&&g.nick&&g.motto&&g.motto.length<=54&&g.nick.length<=26
-    &&![g.cap,g.nick,g.motto].some(t=>t.toLowerCase().includes(g.state.toLowerCase())));
+const cnPool=()=>STATES.map(x=>{
+    const nicks=plain(x[1]).split(/[,\/]/).map(n=>n.trim()).filter(n=>n&&n.length<=26);
+    return {state:x[0],cap:stCap(x[0]),nicks:nicks,nick:pick(nicks.length?nicks:[""]),
+      motto:plain(x[2]).trim()};})
+  .filter(g=>g.cap&&g.nick&&g.motto&&g.motto.length<=54);
 const cnTexts=g=>CNKINDS.map(k=>g[k].toLowerCase());
+/* Two states that share a nickname never share a board -- "Sunshine State" is
+   listed for Florida and New Mexico, and one tile cannot answer to both, however
+   the draw falls. The same test keeps a tile that names another state on the
+   board out of it (a "West Virginia" tile beside Virginia). A tile naming its
+   own state is allowed: Indianapolis gives a little away, and two more states
+   are worth more than that. */
 function cnBoard(){
   const out=[];
   for(const g of shuffle(cnPool())){
     if(out.length===4)break;
-    const mine=cnTexts(g);
-    const clash=out.some(o=>cnTexts(o).some(t=>
-      mine.some(u=>t===u||t.includes(g.state.toLowerCase())||u.includes(o.state.toLowerCase()))));
+    const mine=cnTexts(g),myNicks=g.nicks.map(n=>n.toLowerCase());
+    const clash=out.some(o=>
+      o.nicks.some(n=>myNicks.includes(n.toLowerCase()))
+      ||cnTexts(o).some(t=>mine.some(u=>
+        t===u||t.includes(g.state.toLowerCase())||u.includes(o.state.toLowerCase()))));
     if(!clash)out.push(g);
   }
   return out;
 }
 function startConn(){
-  CN.groups=cnBoard();CN.sel=[];CN.miss=0;CN.solved=[];CN.bad=new Set();CN.over=false;
+  CN.groups=cnBoard();CN.sel=[];CN.miss=0;CN.solved=[];CN.bad=new Set();
+  CN.tried=new Set();CN.over=false;
   CN.tiles=shuffle([].concat(...CN.groups.map((g,i)=>
     CNKINDS.map(k=>({id:i+":"+k,g:i,t:g[k]})))));
   renderConn("Pick the four tiles that belong to one state \u2014 the state itself, its capital, "
@@ -4742,6 +4752,14 @@ function cnMark(i,ok){
 }
 function cnSubmit(){
   if(CN.sel.length!==4||CN.over)return;
+  /* Submitting the same four again is not a second mistake. The selection is
+     left on the board, because the student is mid-thought. */
+  const key=CN.sel.slice().sort().join("|");
+  if(CN.tried.has(key)){
+    renderConn("<b>Already tried.</b> You have submitted those four before \u2014 "
+      +"that one is not a strike.",null);
+    return;
+  }
   const gs=CN.sel.map(id=>+id.split(":")[0]),count={};
   gs.forEach(g=>{count[g]=(count[g]||0)+1;});
   const best=Math.max.apply(null,Object.keys(count).map(k=>count[k]));
@@ -4760,6 +4778,7 @@ function cnSubmit(){
     return;
   }
   CN.miss++;
+  CN.tried.add(key);
   gs.forEach(g=>CN.bad.add(g));
   scoreWrong();
   const msg=best===3?"<b>One away.</b> Three of those four share a state."
