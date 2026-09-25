@@ -661,6 +661,45 @@ kbd{
 .mtile.bad{border-color:var(--miss);animation:shake .32s}
 @keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 
+/* ---------- STATE CONNECTIONS ---------- */
+.conngrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
+.conntile{
+  background:var(--surface);border:1px solid var(--line);border-radius:8px;
+  min-height:58px;padding:8px 7px;display:flex;align-items:center;justify-content:center;
+  text-align:center;font-family:var(--f-read);font-size:14px;line-height:1.3;overflow-wrap:anywhere;
+}
+.conntile:hover:not(:disabled){border-color:var(--text)}
+.conntile.sel{border-color:var(--gold);background:color-mix(in srgb,var(--gold-bright) 18%,transparent)}
+.conntile.bad{border-color:var(--miss);animation:shake .32s}
+/* A solved group takes the row the four tiles came out of, the way the
+   newspaper puzzle stacks them up the page. */
+.connrow{
+  border:1px solid var(--line);border-radius:8px;padding:9px 12px;margin-bottom:8px;
+  text-align:center;font-family:var(--f-read);font-size:14px;line-height:1.35;
+}
+.connrow b{font-family:var(--f-ui);font-weight:800;letter-spacing:.04em;display:block;margin-bottom:2px}
+.connrow i{
+  font-style:normal;font-family:var(--f-ui);font-size:9px;font-weight:800;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
+}
+.connrow.c0{background:color-mix(in srgb,var(--go) 12%,var(--surface));border-color:var(--go)}
+.connrow.c1{background:color-mix(in srgb,var(--gold-bright) 16%,var(--surface));border-color:var(--gold)}
+.connrow.c2{background:color-mix(in srgb,var(--buzz) 10%,var(--surface));border-color:var(--buzz)}
+.connrow.c3{background:var(--surface2);border-color:var(--muted)}
+.connrow.missed{border-style:dashed;opacity:.8}
+.connbar{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;justify-content:space-between;margin-top:12px}
+.connmiss{font-family:var(--f-ui);font-size:12px;font-weight:700;color:var(--muted)}
+.connmiss span{
+  display:inline-block;width:10px;height:10px;border-radius:50%;
+  background:var(--text);margin-left:6px;vertical-align:middle;
+}
+.connmiss span.used{background:var(--line-soft)}
+.connbtns{display:flex;gap:8px;flex-wrap:wrap}
+.connmsg.bad{color:var(--miss)}
+.connmsg.good{color:var(--go)}
+@media (max-width:820px){.conntile{font-size:12px;min-height:60px;padding:7px 5px}}
+@media (pointer:coarse){.conntile{min-height:76px}}
+
 
 
 .mhead{
@@ -3324,15 +3363,25 @@ const cardsCap = ()=>CAPS.map(c=>["What is the capital of "+c[0]+"?",c[1],"US Ge
 const cardsCap2= ()=>CAPS.map(c=>[c[1]+" is the capital of which state?",c[0],"US Geography",
   "That state\u2019s motto is: "+((STATES.find(x=>x[0]===c[0])||["","",""])[2]),
   "cap2:"+c[0]]);
+const stCap=st=>(CAPS.find(c=>c[0]===st)||["",""])[1];
 const cardsNick= ()=>STATES.map(x=>["Nickname(s) for "+x[0]+"?",x[1],"US Geography",
-  "Its capital is "+((CAPS.find(c=>c[0]===x[0])||["",""])[1])+", and the first nickname starts with \u201c"+x[1][0]+"\u201d.",
+  "Its capital is "+stCap(x[0])+", and the first nickname starts with \u201c"+x[1][0]+"\u201d.",
   "nick:"+x[0]]);
+/* The other way round. A deck that only ever asks state -> nickname trains one
+   direction of a fact the judge can ask from either end, which is why the
+   capitals had a reversed deck from the start -- these two now have one too,
+   inside the same deck rather than beside it. */
+const cardsNick2=()=>STATES.map(x=>[
+  "Which state has "+(x[1].includes(",")?"these nicknames":"this nickname")+": "+x[1]+"?",
+  x[0],"US Geography","Its capital is "+stCap(x[0])+".","nick2:"+x[0]]);
 const cardsMotto=()=>STATES.map(x=>{
   const nfo=STATEINFO[x[0]]||{m:""};
   const lang=(nfo.m.split(/[:.]/)[0]||"").trim();
   const words=x[2].replace(/&amp;/g,"and").split(/\s+/).filter(Boolean).length;
   return ["Motto of "+x[0]+"?",x[2],"US Geography",
     (lang?lang+" \u00b7 ":"")+words+" word"+(words>1?"s":""),"motto:"+x[0]];});
+const cardsMotto2=()=>STATES.map(x=>["Which state\u2019s motto is \u201c"+x[2]+"\u201d?",x[0],"US Geography",
+  "Its capital is "+stCap(x[0])+".","motto2:"+x[0]]);
 const cardsSpell=()=>SPELL.filter(x=>inQ(x)&&lvOK(C,x)).map(x=>[
   '<span class="cluelabel">Definition</span>'+x.d+'<div class="cluesent">'+blankOut(x.s,x.w)+'</div>'+sayBtns(x.w)+'<div class="cluecount">'+x.w.length+' letters</div>',
   '<div class="spellout big">'+x.w.split("").join("-").toUpperCase()+'</div><div class="theword">'+x.w+'</div>'+(x.h?'<div class="trap">'+x.h+'</div>':''),
@@ -3369,7 +3418,8 @@ const cardsBoards=()=>[].concat(...sheetBoards().map(cardsBoard));
 
 const DECKS={
   every:{n:"Everything",g:"mix",lv:1,build:()=>shuffle([].concat(
-    cardsQ(),cardsCap(),cardsNick(),cardsMotto(),cardsSpell(),cardsTense(),cardsMyth(),cardsTip(),
+    cardsQ(),cardsCap(),cardsCap2(),cardsNick(),cardsNick2(),cardsMotto(),cardsMotto2(),
+    cardsSpell(),cardsTense(),cardsMyth(),cardsTip(),
     cardsBoards()))},
   all:{n:"All subjects",g:"subj",lv:1,build:()=>cardsQ()},
   MA:{n:"Math",g:"subj",lv:1,build:()=>cardsQ("MA")},
@@ -3377,10 +3427,13 @@ const DECKS={
   EN:{n:"English",g:"subj",lv:1,build:()=>cardsQ("EN")},
   SS:{n:"Social Studies",g:"subj",lv:1,build:()=>cardsQ("SS")},
   tip:{n:"Tip-offs",g:"set",build:cardsTip},
-  caps:{n:"Capitals",g:"set",build:cardsCap},
-  caps2:{n:"Capitals reversed",g:"set",build:cardsCap2},
-  nick:{n:"State nicknames",g:"set",build:cardsNick},
-  motto:{n:"State mottos",g:"set",build:cardsMotto},
+  /* Each of these asks both ways round -- "capital of Ohio?" and "Columbus is
+     the capital of which state?" are one deck, because they are one fact. The
+     two directions keep separate ids (cap:/cap2:), so each is mastered on its
+     own. */
+  caps:{n:"Capitals",g:"set",build:()=>cardsCap().concat(cardsCap2())},
+  nick:{n:"State nicknames",g:"set",build:()=>cardsNick().concat(cardsNick2())},
+  motto:{n:"State mottos",g:"set",build:()=>cardsMotto().concat(cardsMotto2())},
   spell:{n:"Spelling words",g:"set",lv:1,build:cardsSpell},
   tense:{n:"Verb tenses",g:"set",build:cardsTense},
   myth:{n:"Mythology",g:"set",build:cardsMyth}
@@ -4495,6 +4548,9 @@ function matchCtl(){
       <div class="ctl"><i>Questions</i><div class="chips" data-f="set">
         ${SUBJSETS.map(([k,n])=>`<button class="chip" data-v="${k}" aria-pressed="${k===M.set}">${n}</button>`).join("")}
       </div></div>
+      <div class="ctl"><i>Game</i><div class="chips" data-f="set">
+        <button class="chip" data-v="conn" aria-pressed="${M.set==="conn"}">State Connections</button>
+      </div></div>
     </div>
     <div class="ctl"><i>Memorize boards</i><div class="chips" data-f="set">
       ${Object.entries(MATCHSETS).map(([k,v])=>`<button class="chip" data-v="${k}" aria-pressed="${k===M.set}">${v.name}</button>`).join("")}
@@ -4507,6 +4563,7 @@ $("#matchCtl").addEventListener("click",e=>{
 matchCtl();
 function startMatch(){
   $("#matchArea").dataset.init="1";
+  if(M.set==="conn"){startConn();return;}
   if(M.set.indexOf("q:")===0){
     const pool=ivPool(BOARDIV,M.set.slice(2));
     if(!pool.length){
@@ -4600,6 +4657,140 @@ function matchClick(b){
     setTimeout(()=>{a.classList.remove("bad","sel");b.classList.remove("bad");},330);
     M.sel=null;
   }
+}
+
+/* ============================================================
+   STATE CONNECTIONS
+   Sixteen tiles: four states, each with its capital, its nickname and its
+   motto. Nothing on a tile says which of the four kinds it is, so the only
+   way in is knowing the state -- which is the whole point, and why it reads
+   the tables from both ends at once the way the merged decks do.
+   Three strikes ends it: the newspaper's four is generous when a wrong set
+   costs nothing but another guess.
+   ============================================================ */
+const CN={groups:[],tiles:[],sel:[],miss:0,solved:[],bad:new Set(),over:false};
+const CNMISS=3;
+const CNKINDS=["state","cap","nick","motto"];
+const CNLABEL={state:"State",cap:"Capital",nick:"Nickname",motto:"Motto"};
+
+/* A tile that names its own state hands the group over (Indianapolis,
+   Oklahoma City), and "Sunshine State" is listed for two states, so a board
+   never takes two states whose texts touch each other. Long mottos are left
+   out because sixteen tiles have to fit on an 11.6" screen. */
+const cnPool=()=>STATES.map(x=>({state:x[0],cap:stCap(x[0]),
+    nick:plain(x[1]).split(/[,\/]/)[0].trim(),motto:plain(x[2]).trim()}))
+  .filter(g=>g.cap&&g.nick&&g.motto&&g.motto.length<=54&&g.nick.length<=26
+    &&![g.cap,g.nick,g.motto].some(t=>t.toLowerCase().includes(g.state.toLowerCase())));
+const cnTexts=g=>CNKINDS.map(k=>g[k].toLowerCase());
+function cnBoard(){
+  const out=[];
+  for(const g of shuffle(cnPool())){
+    if(out.length===4)break;
+    const mine=cnTexts(g);
+    const clash=out.some(o=>cnTexts(o).some(t=>
+      mine.some(u=>t===u||t.includes(g.state.toLowerCase())||u.includes(o.state.toLowerCase()))));
+    if(!clash)out.push(g);
+  }
+  return out;
+}
+function startConn(){
+  CN.groups=cnBoard();CN.sel=[];CN.miss=0;CN.solved=[];CN.bad=new Set();CN.over=false;
+  CN.tiles=shuffle([].concat(...CN.groups.map((g,i)=>
+    CNKINDS.map(k=>({id:i+":"+k,g:i,t:g[k]})))));
+  renderConn("Pick the four tiles that belong to one state \u2014 the state itself, its capital, "
+    +"its nickname and its motto \u2014 then submit.");
+}
+function connRow(x){
+  const g=CN.groups[x.i];
+  return `<div class="connrow c${x.i} ${x.how}"><b>${esc(g.state)}</b>`
+    +CNKINDS.slice(1).map(k=>`<i>${CNLABEL[k]}</i> ${esc(g[k])}`).join(" &middot; ")+`</div>`;
+}
+function renderConn(msg,tone){
+  const dots=[];
+  for(let i=0;i<CNMISS;i++)dots.push(`<span class="${i<CN.miss?"used":""}"></span>`);
+  const playing=CN.tiles.length&&!CN.over;
+  $("#matchArea").innerHTML=`
+    <div class="connsolved">${CN.solved.map(connRow).join("")}</div>
+    ${playing?`<div class="conngrid">${CN.tiles.map(x=>
+      `<button class="conntile${CN.sel.includes(x.id)?" sel":""}" data-i="${x.id}">${esc(x.t)}</button>`
+      ).join("")}</div>`:""}
+    <p class="hint connmsg ${tone||""}" id="cnMsg" style="margin:14px 0 0">${msg}</p>
+    <div class="connbar">
+      ${playing?`<span class="connmiss">Mistakes remaining:${dots.join("")}</span>`:"<span></span>"}
+      <span class="connbtns">
+        ${playing?`<button class="btn ghost small" id="cnShuf">Shuffle</button>
+        <button class="btn ghost small" id="cnClear">Deselect all</button>
+        <button class="btn small" id="cnGo"${CN.sel.length===4?"":" disabled"}>Submit</button>`:""}
+        <button class="btn ${playing?"ghost ":""}small" id="cnSkip">${playing?"New board":"Another board"}</button>
+      </span>
+    </div>`;
+  $("#matchArea").querySelectorAll(".conntile").forEach(b=>b.onclick=()=>cnTap(b.dataset.i));
+  const on=(id,fn)=>{const el=$("#"+id);if(el)el.onclick=fn;};
+  /* Shuffling keeps the selection: the tiles carry their own ids, and a
+     student who has picked three and is hunting the fourth should not be made
+     to start again. */
+  on("cnShuf",()=>{CN.tiles=shuffle(CN.tiles);renderConn($("#cnMsg").innerHTML,tone);});
+  on("cnClear",()=>{CN.sel=[];renderConn($("#cnMsg").innerHTML,tone);});
+  on("cnGo",cnSubmit);
+  on("cnSkip",startConn);
+}
+function cnTap(id){
+  if(CN.over)return;
+  const at=CN.sel.indexOf(id);
+  if(at>=0)CN.sel.splice(at,1);
+  else if(CN.sel.length<4)CN.sel.push(id);
+  else return;
+  renderConn($("#cnMsg").innerHTML,null);
+}
+/* Every tile is a card somewhere: the capital, the nickname and the motto are
+   the three the reference decks drill, so a group solved first time marks all
+   three and a group that took a wrong guess hands them back. */
+function cnMark(i,ok){
+  const g=CN.groups[i];
+  markSeen("cap:"+g.state,ok);markSeen("nick:"+g.state,ok);markSeen("motto:"+g.state,ok);
+}
+function cnSubmit(){
+  if(CN.sel.length!==4||CN.over)return;
+  const gs=CN.sel.map(id=>+id.split(":")[0]),count={};
+  gs.forEach(g=>{count[g]=(count[g]||0)+1;});
+  const best=Math.max.apply(null,Object.keys(count).map(k=>count[k]));
+  if(best===4){
+    const gi=gs[0],firstTry=!CN.bad.has(gi);
+    CN.solved.push({i:gi,how:firstTry?"firsttry":"tookago"});
+    CN.tiles=CN.tiles.filter(x=>x.g!==gi);
+    CN.sel=[];addScore(12);cnMark(gi,firstTry);
+    if(!CN.tiles.length){
+      ST.badges.match=1;save();scoreRight("conn:board",20);
+      renderConn(`<b>${CN.bad.size?"Board cleared"+(tailName()||"."):capName()+"you swept the board."}</b>`
+        +" +20 bonus.","good");
+      return;
+    }
+    renderConn("<b>That is a state.</b> "+CN.tiles.length/4+" to go.","good");
+    return;
+  }
+  CN.miss++;
+  gs.forEach(g=>CN.bad.add(g));
+  scoreWrong();
+  const msg=best===3?"<b>One away.</b> Three of those four share a state."
+    :"<b>Not a set.</b> Those tiles come from "+Object.keys(count).length+" different states.";
+  $("#matchArea").querySelectorAll(".conntile.sel").forEach(b=>b.classList.add("bad"));
+  setTimeout(()=>{
+    CN.sel=[];
+    if(CN.miss>=CNMISS)cnOut();
+    else renderConn(msg,"bad");
+  },360);
+}
+function cnOut(){
+  CN.over=true;
+  CN.groups.forEach((g,i)=>{
+    if(CN.solved.some(x=>x.i===i))return;
+    cnMark(i,false);
+    CN.solved.push({i:i,how:"missed"});
+  });
+  CN.solved.sort((a,b)=>a.i-b.i);
+  CN.tiles=[];CN.sel=[];
+  renderConn("<b>Three strikes.</b> Here are the four states \u2014 the ones you did not get are "
+    +"back in your flashcards.","bad");
 }
 
 /* ============================================================
