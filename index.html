@@ -1448,7 +1448,7 @@ const POSTAL={
   "Wyoming":"WY"
 };
 const STATES=[
-["Alabama","Cotton State, Yellowhammer State","Audemus Jura Nostra Defendere"],
+["Alabama","Cotton State / Yellowhammer State","Audemus Jura Nostra Defendere"],
 ["Alaska","The Last Frontier","North to the Future"],
 ["Arizona","Grand Canyon State","Ditat Deus"],
 ["Arkansas","Natural State","Regnat Populus"],
@@ -1457,46 +1457,46 @@ const STATES=[
 ["Connecticut","Constitution State / Nutmeg State","Qui Transtulit Sustinet"],
 ["Delaware","First State / Diamond State","Liberty &amp; Independence"],
 ["Florida","Sunshine State","In God We Trust"],
-["Georgia","Peach State, Empire State of the South","Wisdom, Justice, &amp; Moderation"],
+["Georgia","Peach State / Empire State of the South","Wisdom, Justice, &amp; Moderation"],
 ["Hawaii","Aloha State","Ua Mau ke Ea o ka ʻĀina i ka Pono"],
 ["Idaho","Gem State","Esto Perpetua"],
-["Illinois","Prairie State, Land of Lincoln","State Sovereignty, National Union"],
+["Illinois","Prairie State / Land of Lincoln","State Sovereignty, National Union"],
 ["Indiana","Hoosier State","The Crossroads of America"],
-["Iowa","Hawkeye State, Corn State","Our Liberties We Prize &amp; Our Rights We Will Maintain"],
-["Kansas","Sunflower State, Jayhawker State","Ad Astra per Aspera"],
+["Iowa","Hawkeye State / Corn State","Our Liberties We Prize &amp; Our Rights We Will Maintain"],
+["Kansas","Sunflower State / Jayhawker State","Ad Astra per Aspera"],
 ["Kentucky","Bluegrass State","United We Stand, Divided We Fall"],
-["Louisiana","Pelican State, Creole State, Sugar State","Union, Justice, Confidence"],
+["Louisiana","Pelican State / Creole State / Sugar State","Union, Justice, Confidence"],
 ["Maine","Pine Tree State","Dirigo"],
-["Maryland","Free State, Old Line State","Fatti Maschii, Parole Femine"],
-["Massachusetts","Bay State, Old Colony State","Ense Petit Placidam Sub Libertate Quietem"],
-["Michigan","Wolverine State, Great Lakes State","Si Quaeris Peninsulam Amoenam Circumspice"],
-["Minnesota","North Star State, Gopher State, Land of 10,000 Lakes","L’Étoile du Nord"],
+["Maryland","Free State / Old Line State","Fatti Maschii, Parole Femine"],
+["Massachusetts","Bay State / Old Colony State","Ense Petit Placidam Sub Libertate Quietem"],
+["Michigan","Wolverine State / Great Lakes State","Si Quaeris Peninsulam Amoenam Circumspice"],
+["Minnesota","North Star State / Gopher State / Land of 10,000 Lakes","L’Étoile du Nord"],
 ["Mississippi","Magnolia State","Virtute et Armis"],
 ["Missouri","Show Me State","Salus Populi Suprema Lex Esto"],
-["Montana","Big Sky Country, Treasure State","Oro y Plata"],
-["Nebraska","Cornhusker State, Beef State","Equality Before the Law"],
-["Nevada","Silver State, Sagebrush State, Battle Born State","All For Our Country"],
+["Montana","Big Sky Country / Treasure State","Oro y Plata"],
+["Nebraska","Cornhusker State / Beef State","Equality Before the Law"],
+["Nevada","Silver State / Sagebrush State / Battle Born State","All For Our Country"],
 ["New Hampshire","Granite State","Live Free or Die"],
 ["New Jersey","Garden State","Liberty and Prosperity"],
-["New Mexico","Land of Enchantment, Sunshine State","Crescit Eundo"],
+["New Mexico","Land of Enchantment / Sunshine State","Crescit Eundo"],
 ["New York","Empire State","Excelsior"],
-["North Carolina","Tar Heel State, Old North State","Esse Quam Videri"],
-["North Dakota","Sioux State, Flickertail State, Peace Garden State","Liberty &amp; Union, Now &amp; Forever, One &amp; Inseparable"],
+["North Carolina","Tar Heel State / Old North State","Esse Quam Videri"],
+["North Dakota","Sioux State / Flickertail State / Peace Garden State","Liberty &amp; Union, Now &amp; Forever, One &amp; Inseparable"],
 ["Ohio","Buckeye State","With God, All Things are Possible"],
 ["Oklahoma","Sooner State","Labor Omnia Vincit"],
 ["Oregon","Beaver State","Alis Volat Propriis"],
 ["Pennsylvania","Keystone State","Virtue, Liberty, &amp; Independence"],
-["Rhode Island","Ocean State, Little Rhody","Hope"],
+["Rhode Island","Ocean State / Little Rhody","Hope"],
 ["South Carolina","Palmetto State","Dum Spiro Spero / Animis Opibusque Parati"],
 ["South Dakota","The Mount Rushmore State","Under God the People Rule"],
 ["Tennessee","Volunteer State","Agriculture &amp; Commerce"],
 ["Texas","Lone Star State","Friendship"],
 ["Utah","Beehive State","Industry"],
 ["Vermont","Green Mountain State","Freedom &amp; Unity"],
-["Virginia","The Old Dominion, Mother of Presidents","Sic Semper Tyrannis"],
-["Washington","Evergreen State, Chinook State","Alki"],
+["Virginia","The Old Dominion / Mother of Presidents","Sic Semper Tyrannis"],
+["Washington","Evergreen State / Chinook State","Alki"],
 ["West Virginia","Mountain State","Montani Semper Liberi"],
-["Wisconsin","Badger State, America's Dairyland","Forward"],
+["Wisconsin","Badger State / America's Dairyland","Forward"],
 ["Wyoming","Equality State","Equal Rights"]
 ];
 
@@ -1985,7 +1985,7 @@ const QLISTS={"145":{"lead":"Supply the animal missing from each of the followin
 
 const MATCHSETS={
   caps:{name:"State &rarr; Capital",l:"State",r:"Capital",pairs:CAPS.map(x=>[x[0],x[1]])},
-  nick:{name:"State &rarr; Nickname",l:"State",r:"Nickname",pairs:STATES.map(x=>[x[0],x[1].split(",")[0].split(" / ")[0]])},
+  nick:{name:"State &rarr; Nickname",l:"State",r:"Nickname",pairs:STATES.map(x=>[x[0],x[1].split("/")[0].trim()])},
   motto:{name:"State &rarr; Motto",l:"State",r:"Motto",pairs:STATES.map(x=>[x[0],x[2].split(" / ")[0]])},
   roots:{name:"Latin &amp; Greek roots",l:"Root",r:"Meaning",sheet:1,pairs:[["mar","sea or ocean","Marine animals live here, and a submarine travels through it.",["land or earth","sky or air","river or stream"]],["super","above / higher","Superman flies over the city, never under it.",["below / lower","beside / near","inside / within"]],["ver","true or truth","A jury's verdict, and a fact you can verify.",["false or lie","turn or change","speech or word"]],["tox","poison / deadly","Why a toxic spill is dangerous to touch.",["sickness / disease","burning / fire","smell / odor"]],["intro-","looking inward","An introvert recharges by spending time alone with their thoughts.",["looking outward","looking backward","looking forward"]],["retro-","looking backward","Retro fashion brings back styles from decades ago.",["looking forward","looking inward","looking upward"]],["quadru-","four","A quadruped walks on all its legs. Count a dog's.",["three","five","eight"]],["bi-","two","Count the wheels on a bicycle.",["one","three","half"]],["centi-","hundred","A century is this many years.",["ten","thousand","million"]],["milli-","thousand","A millennium is this many years.",["hundred","million","ten"]],["-pede","foot","A pedestrian gets around on these.",["hand","wing","head"]],["sub-","under","A subway runs where, compared with the street?",["over","beside","through"]]]},
   sci:{name:"Science terms",l:"Term",r:"Definition",sheet:1,pairs:[["mutualism","Both organisms benefit","Bees get nectar, and the flowers get pollinated.",["One benefits, the other is unaffected","One benefits, the other is harmed","Both organisms are harmed"]],["commensalism","One benefits, the other is unaffected","A barnacle rides along on a whale, and the whale never notices.",["Both organisms benefit","One benefits, the other is harmed","Neither organism is affected"]],["parasitism","One benefits, the other is harmed","Think of a tick feeding on a dog.",["Both organisms benefit","One benefits, the other is unaffected","Both organisms are harmed"]],["meiosis","One cell divides twice into four cells","It makes sex cells, each with half the usual chromosomes.",["One cell divides once into two cells","Two cells fuse into one cell","One cell divides three times into eight"]],["sublimation","Solid straight to gas","The fog that pours off dry ice skips a step.",["Gas straight to solid","Liquid straight to gas","Solid straight to liquid"]],["inertia","Newton's First Law","A ball keeps rolling until something stops it. Which of Newton's laws is that?",["Newton's Second Law","Newton's Third Law","Newton's Law of Gravity"]],["reflection","Waves bounce off a barrier","A mirror, or an echo off a canyon wall.",["Waves bend passing into a new medium","Waves spread around a barrier","Waves pass straight through a barrier"]],["refraction","Waves bend passing into a new medium","Why a straw looks broken in a glass of water.",["Waves bounce off a barrier","Waves spread out around an obstacle","Waves combine into a bigger wave"]],["natural selection","Beneficial traits survive and spread","Darwin's idea: the environment does the choosing.",["Humans breed for useful traits","Every trait is passed on equally","Organisms change their traits on purpose"]],["artificial selection","Humans breed for useful traits","Dog breeders and farmers do the choosing.",["Beneficial traits survive and spread","Traits change at random over time","Organisms choose their own traits"]],["low-silica lava","Thin and runny","Hawaii's lava pours out gently in long rivers.",["Very thick","Thick and sticky","Solid and cold"]],["high-silica lava","Very thick","It traps gas and blows apart, like Mount St. Helens.",["Thin and runny","Very runny","Watery and fast"]]]},
@@ -3372,7 +3372,7 @@ const cardsNick= ()=>STATES.map(x=>["Nickname(s) for "+x[0]+"?",x[1],"US Geograp
    capitals had a reversed deck from the start -- these two now have one too,
    inside the same deck rather than beside it. */
 const cardsNick2=()=>STATES.map(x=>[
-  "Which state has "+(x[1].includes(",")?"these nicknames":"this nickname")+": "+x[1]+"?",
+  "Which state has "+(x[1].includes("/")?"these nicknames":"this nickname")+": "+x[1]+"?",
   x[0],"US Geography","Its capital is "+stCap(x[0])+".","nick2:"+x[0]]);
 const cardsMotto=()=>STATES.map(x=>{
   const nfo=STATEINFO[x[0]]||{m:""};
@@ -3768,7 +3768,7 @@ function qsNick(){
   const out=[];
   /* "Sunshine State" is printed for both Florida and New Mexico, so asking
      which state it belongs to has two right answers. Drop those. */
-  const first=x=>x[1].split(/[,/]/)[0].trim();
+  const first=x=>x[1].split("/")[0].trim();
   const tally={};
   STATES.forEach(x=>{const k=first(x);tally[k]=(tally[k]||0)+1;});
   STATES.forEach(x=>{
@@ -4679,7 +4679,7 @@ const CNLABEL={state:"State",cap:"Capital",nick:"Nickname",motto:"Motto"};
    never takes two states whose texts touch each other. Long mottos are left
    out because sixteen tiles have to fit on an 11.6" screen. */
 const cnPool=()=>STATES.map(x=>{
-    const nicks=plain(x[1]).split(/[,\/]/).map(n=>n.trim()).filter(n=>n&&n.length<=26);
+    const nicks=plain(x[1]).split("/").map(n=>n.trim()).filter(n=>n&&n.length<=26);
     return {state:x[0],cap:stCap(x[0]),nicks:nicks,nick:pick(nicks.length?nicks:[""]),
       motto:plain(x[2]).trim()};})
   .filter(g=>g.cap&&g.nick&&g.motto&&g.motto.length<=54);

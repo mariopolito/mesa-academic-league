@@ -51,7 +51,7 @@ YES = "yes"
 # in the order the page has always shown them.
 DERIVED_BOARDS = [
     ("caps", '{name:"State &rarr; Capital",l:"State",r:"Capital",pairs:CAPS.map(x=>[x[0],x[1]])}'),
-    ("nick", '{name:"State &rarr; Nickname",l:"State",r:"Nickname",pairs:STATES.map(x=>[x[0],x[1].split(",")[0].split(" / ")[0]])}'),
+    ("nick", '{name:"State &rarr; Nickname",l:"State",r:"Nickname",pairs:STATES.map(x=>[x[0],x[1].split("/")[0].trim()])}'),
     ("motto", '{name:"State &rarr; Motto",l:"State",r:"Motto",pairs:STATES.map(x=>[x[0],x[2].split(" / ")[0]])}'),
     ("roots", None),
     ("sci", None),
@@ -134,7 +134,10 @@ TABS = [
         col("State", 130, lock=True, note="All fifty, no more and no fewer."),
         col("Capital", 130),
         col("Postal code", 70),
-        col("Nicknames", 260, wrap=True),
+        col("Nicknames", 260, wrap=True,
+            note="Separate two or more nicknames with a slash: Cotton State / "
+                 "Yellowhammer State. A comma belongs inside a nickname, as in "
+                 "Land of 10,000 Lakes."),
         col("Motto", 260, wrap=True),
         col("Nickname story", 360, wrap=True),
         col("Motto meaning", 360, wrap=True),
@@ -585,6 +588,11 @@ def from_tabs(tabs, catcode, rep):
         for h in ("Nickname story", "Motto meaning"):
             if not c[h]:
                 rep.warn(w, "%s is blank" % h)
+        for part in c["Nicknames"].split("/"):
+            if re.search(r",\s*\D", part):
+                rep.warn(w, 'Nicknames: separate nicknames with a slash, not a comma '
+                            '-- got "%s". A comma inside a nickname is fine '
+                            '(Land of 10,000 Lakes).' % part.strip())
         CAPS.append([st, c["Capital"]])
         STATES.append([st, c["Nicknames"], c["Motto"]])
         POSTAL[st] = code

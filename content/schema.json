@@ -275,7 +275,8 @@
     {
      "h": "Nicknames",
      "w": 260,
-     "wrap": true
+     "wrap": true,
+     "note": "Separate two or more nicknames with a slash: Cotton State / Yellowhammer State. A comma belongs inside a nickname, as in Land of 10,000 Lakes."
     },
     {
      "h": "Motto",
