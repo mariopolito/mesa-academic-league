@@ -529,7 +529,7 @@ const UPS = [
     req:()=>[S.st.used,10], txt:"Use 10 tools"},
   {id:"trade", after:"shop", name:"Trading post", does:"Trade tools for other tools in the shop, with no sparks involved.", cost:20000,
     req:()=>[S.st.bought + S.st.sold,10], txt:"Buy or sell 10 tools in the shop"},
-  {id:"streak", name:"Reinforced boiler", does:"The pressure gauge holds twice as much: up to ×5 instead of ×3.", cost:12000,
+  {id:"streak", name:"Reinforced boiler", does:"Raises the pressure gauge's top multiplier from ×3 to ×5.", cost:12000,
     req:()=>[S.st.best,15], txt:"Get 15 in a row"},
   {id:"polish", name:"Polishing kit", does:"A right answer restores 35% shine instead of 20%.", cost:40000,
     req:()=>[S.st.right,150], txt:"Answer 150 questions right"},
