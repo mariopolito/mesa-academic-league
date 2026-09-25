@@ -210,6 +210,13 @@ body.noqtr .panel.scoped .scopeblock{display:block}
 }
 .ev:hover{color:var(--text)}
 .ev[aria-current="true"]{color:var(--text);border-bottom-color:var(--buzz)}
+/* The Knowledge Engine: a gear at the far end of the tabs, and only a link --
+   the site does not depend on the game in any way. */
+.enginelink{margin-left:auto;display:flex;align-items:center;padding:0 12px;color:var(--muted);flex:none}
+.enginelink svg{width:22px;height:22px;display:block;transition:transform .6s ease}
+.enginelink:hover,.enginelink:focus-visible{color:var(--gold)}
+.enginelink:hover svg{transform:rotate(135deg)}
+@media (prefers-reduced-motion:reduce){.enginelink svg{transition:none}}
 
 
 /* ---------- THE NAME ---------- */
@@ -2994,6 +3001,46 @@ function go(id){
   }
 }
 $("#nav").addEventListener("click",e=>{const b=e.target.closest(".ev");if(b)go(b.dataset.m);});
+
+/* ============================================================
+   THE KNOWLEDGE ENGINE
+   A separate study game at engine/. The site never depends on it: this is a
+   link, plus a note of when the student is studying. On the live site the link
+   is relative; opened from disk or anywhere else, it goes to the live game.
+   ============================================================ */
+(function engineLink(){
+  const onSite=/(^|\.)github\.io$|netlify\.app$|^localhost$|^127\.0\.0\.1$/.test(location.hostname);
+  const a=document.createElement("a");
+  a.className="enginelink";
+  a.href=onSite?"engine/":"https://mariopolito.github.io/mesa-academic-league/engine/";
+  a.title="Knowledge Engine: a study game built on these questions";
+  a.setAttribute("aria-label","Knowledge Engine");
+  a.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12.0 4.8L13.4 2.1L15.2 2.5L15.3 5.6L17.1 6.9L20.0 6.0L21.0 7.6L18.8 9.8L19.2 12.0L21.9 13.4L21.5 15.2L18.4 15.3L17.1 17.1L18.0 20.0L16.4 21.0L14.2 18.8L12.0 19.2L10.6 21.9L8.8 21.5L8.7 18.4L6.9 17.1L4.0 18.0L3.0 16.4L5.2 14.2L4.8 12.0L2.1 10.6L2.5 8.8L5.6 8.7L6.9 6.9L6.0 4.0L7.6 3.0L9.8 5.2Z M15 12A3 3 0 1 0 9 12A3 3 0 1 0 15 12Z"/></svg>';
+  $("#nav").appendChild(a);
+})();
+/* The study clock. Every minute in which the student actually does something
+   here -- a click, a key, a scroll, on a visible page -- is noted in
+   localStorage "mal-activity" as runs of minutes, {v:1, m:[[start,end],...]}.
+   A minute counts itself and the next, so steady studying is one run. The
+   Knowledge Engine reads it to stop its gears rusting while the student
+   studies; nothing on this site reads it back. At most one write a minute,
+   eight days kept, and a blocked storage simply means nothing is noted. */
+(function studyClock(){
+  const KEY="mal-activity";let last=-1;
+  const mark=()=>{
+    if(document.visibilityState!=="visible")return;
+    const m=Math.floor(Date.now()/60000);if(m===last)return;last=m;
+    try{
+      const d=JSON.parse(localStorage.getItem(KEY)||"{}"),runs=Array.isArray(d.m)?d.m:[];
+      const r=runs[runs.length-1];
+      if(r&&r[1]>=m-1)r[1]=Math.max(r[1],m+1);else runs.push([m,m+1]);
+      while(runs.length&&runs[0][1]<m-8*1440)runs.shift();
+      localStorage.setItem(KEY,JSON.stringify({v:1,m:runs.slice(-500)}));
+    }catch(e){}
+  };
+  ["pointerdown","keydown","wheel","touchstart"].forEach(ev=>
+    document.addEventListener(ev,mark,{passive:true,capture:true}));
+})();
 
 $("#tiles").innerHTML=TILES.map(t=>
   `<button class="tile" data-m="${t.m}"><span class="k">${t.k}</span><span class="t">${t.t}</span><span class="d">${t.d}</span></button>`).join("");

@@ -12,6 +12,19 @@
 !/content/
 !/sheet/
 
+# The Knowledge Engine: engine/ is the page the site links to; game/ builds it.
+# game/engine.html (the Artifact copy) and game/Knowledge-Engine.html (the
+# standalone copy) are generated and stay local.
+!/engine/
+!/game/
+/game/*
+!/game/README.md
+!/game/engine_src.html
+!/game/build_game.py
+!/game/export_items.js
+!/game/export_server.py
+!/game/items.json
+
 !/tools/
 /tools/*
 !/tools/content.py
