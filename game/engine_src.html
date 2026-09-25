@@ -14,6 +14,7 @@
   --serif:"Source Serif 4",Georgia,"Times New Roman",serif;
 }
 html,body{height:100%}
+body{display:flex;flex-direction:column}
 body{margin:0}
 [hidden]{display:none!important}
 body{background:var(--iron);color:var(--text);font:15px/1.45 var(--ui);
@@ -22,11 +23,20 @@ button,select{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--spark);outline-offset:2px}
 
-.top{display:flex;align-items:center;gap:20px;flex-wrap:wrap;padding:10px 20px;
-  border-bottom:2px solid var(--brass);background:linear-gradient(#1c2026,#16191e)}
-.backlink{font:700 12px/1 var(--ui);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-decoration:none;
-  border:1px solid var(--line);border-radius:4px;padding:7px 10px;white-space:nowrap}
-.backlink:hover{color:var(--brass);border-color:var(--brass)}
+/* The bar runs full width; its contents line up with the page below
+   (.top-in and .main share a max-width and side padding). */
+.top{position:relative;border-bottom:2px solid var(--brass);background:linear-gradient(#1c2026,#16191e)}
+.top-in{display:flex;align-items:center;gap:20px;flex-wrap:wrap;padding:10px 20px;max-width:1300px;margin:0 auto;box-sizing:border-box}
+.subline{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+/* "Study site" sits under the wordmark, beside the nameplate. When the window
+   is wide enough to leave a margin, it moves out into the left margin. */
+.backlink{font:700 11px/1.3 var(--ui);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-decoration:none;white-space:nowrap}
+.backlink:hover,.backlink:focus-visible{color:var(--brass)}
+@media (min-width:1560px){
+  .backlink{position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:12px;letter-spacing:.08em;
+    border:1px solid var(--line);border-radius:4px;padding:7px 10px}
+  .backlink:hover{border-color:var(--brass)}
+}
 .brand{font:800 26px/1 var(--stencil);letter-spacing:.06em;color:var(--brass);text-transform:uppercase;flex:1 1 auto}
 .plate{display:block;background:none;border:0;padding:0;margin-top:2px;font:600 11px/1.3 var(--ui);letter-spacing:.12em;
   text-transform:uppercase;color:var(--muted);text-align:left;cursor:pointer}
@@ -72,7 +82,8 @@ button{cursor:pointer}
 @keyframes spark{from{transform:translate(0,0);opacity:1}to{transform:translate(var(--dx),var(--dy));opacity:0}}
 
 .main{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:18px;
-  padding:16px 20px;max-width:1300px;margin:0 auto;height:calc(100% - 70px);box-sizing:border-box}
+  padding:16px 20px;max-width:1300px;width:100%;margin:0 auto;box-sizing:border-box;
+  flex:1 1 auto;min-height:0}   /* fills what the header leaves, whatever its height */
 .col{min-height:0;display:flex;flex-direction:column;gap:12px}
 
 /* Question console */
@@ -185,6 +196,7 @@ details.how b{color:var(--text)}
   font-weight:700;letter-spacing:.06em;text-transform:uppercase}
 .bar{height:6px;background:var(--iron);border-radius:3px;overflow:hidden}
 .bar i{display:block;height:100%;width:0}
+.bars [data-tip]{cursor:help}
 .bars em{font-style:normal;font-variant-numeric:tabular-nums;text-align:right;min-width:34px}
 .gbtns{grid-row:span 2;display:flex;flex-direction:column;gap:5px;align-items:stretch}
 .gbtns .btn{padding:5px 10px;font-size:13px;white-space:nowrap;font-variant-numeric:tabular-nums}
@@ -287,7 +299,8 @@ h3.sec{font:800 18px/1 var(--stencil);letter-spacing:.08em;text-transform:upperc
 .ach.secret{border-style:dashed;opacity:.65}
 
 @media (max-width:860px){
-  .main{grid-template-columns:1fr;height:auto}
+  body{height:auto}
+  .main{grid-template-columns:1fr;flex:none}
   .pane{overflow:visible}
   .opts{grid-template-columns:1fr}
   .meter b{font-size:32px}
@@ -296,9 +309,8 @@ h3.sec{font:800 18px/1 var(--stencil);letter-spacing:.08em;text-transform:upperc
 @media (prefers-reduced-motion:reduce){ .gear svg g,.gear:hover svg{animation:none!important} .float{animation:none;opacity:0} .odbadge,.tool.bump,.opt.tapme,.up.fresh,.toast,.gauge.flash{animation:none} .vent{display:none} .gauge #gNeedle{transition:none} }
 </style>
 <!--BODY-->
-<header class="top">
-  <a class="backlink" id="backlink" href="../" title="Back to the study site">← Study site</a>
-  <div class="brand">Knowledge Engine<button class="plate" id="plate" type="button"></button></div>
+<header class="top"><div class="top-in">
+  <div class="brand">Knowledge Engine<div class="subline"><button class="plate" id="plate" type="button"></button><a class="backlink" id="backlink" href="../" title="Back to the study site">← Study site</a></div></div>
   <div class="meter"><b id="sp">0</b><span>sparks · <i id="pps">0</i> per second</span></div>
   <div class="odbadge" id="odBadge" hidden>Overdrive ×5 <b id="odTime">0:00</b></div>
   <div class="gauge" id="gauge" title="Pressure builds with every right answer and multiplies what answers earn. A miss drops it one zone.">
@@ -311,7 +323,7 @@ h3.sec{font:800 18px/1 var(--stencil);letter-spacing:.08em;text-transform:upperc
     <div class="gread"><b id="gMult">×1.0</b><span id="gZone">Cold</span><small id="gRun">0 in a row</small></div>
     <div class="vent" id="vent"></div>
   </div>
-</header>
+</div></header>
 
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
@@ -1027,8 +1039,8 @@ function paintGears(){
         <button class="btn" type="button" data-practice="${t.id}">Practice</button>
       </div>
       <div class="bars">
-        <span>Mastery</span><div class="bar"><i data-k="m"></i></div><em data-k="mt"></em>
-        <span>Shine</span><div class="bar"><i data-k="f"></i></div><em data-k="ft"></em>
+        <span data-tip="m">Mastery</span><div class="bar" data-tip="m"><i data-k="m"></i></div><em data-k="mt" data-tip="m"></em>
+        <span data-tip="f">Shine</span><div class="bar" data-tip="f"><i data-k="f"></i></div><em data-k="ft" data-tip="f"></em>
         <span>Makes</span><span data-k="r" style="grid-column:span 2;text-transform:none;letter-spacing:0;color:var(--text)"></span>
       </div>
     </div>`;
@@ -1043,6 +1055,14 @@ function tickGears(){
     const t = TOPIC[el.dataset.g], w = S.w[t.id], m = mastery(t.id), r = rate(t);
     el.querySelector('[data-k="m"]').style.cssText = `width:${m*100}%;background:var(--go)`;
     el.querySelector('[data-k="mt"]').textContent = Math.round(m*100) + "%";
+    /* What mastery and shine are doing for this gear, on hover. */
+    const mo = 1 + (S.ups.photo ? 8 : 4) * m;
+    const tipM = `Mastery ${Math.round(m*100)}%: ×${mo.toFixed(1)} output, rusts ${(1 + 3*m).toFixed(1)}× slower` +
+      ` (at 100%: ×${S.ups.photo ? 9 : 5} output, 4× slower). Answer this topic right without help to raise it.`;
+    const tipF = own(t.id) ? `Shine ${Math.round(w.f)}%: running at ${Math.round(w.f)}% of full speed. Right answers in this topic polish it.`
+      : "Shine: how polished the gear is. A rusty gear makes less.";
+    el.querySelectorAll('[data-tip="m"]').forEach(x=>{ if(x.title !== tipM) x.title = tipM; });
+    el.querySelectorAll('[data-tip="f"]').forEach(x=>{ if(x.title !== tipF) x.title = tipF; });
     const f = own(t.id) ? w.f : 0;
     el.querySelector('[data-k="f"]').style.cssText = `width:${f}%;background:${shineColor(f, LOOK[t.id].c)}`;
     el.querySelector('[data-k="ft"]').textContent = own(t.id) ? Math.round(f) + "%" : "–";
