@@ -40,6 +40,20 @@ A new quiz set on the site stops the export until it is given a gear in
 Question ids are the site's (`q70`, `caps/cap:Ohio`, `myth/myth:Zeus~2`), so
 progress survives a re-export as long as the site keeps its order.
 
+## Rebuild the Engine (prestige)
+
+Unlocks when all 10 gears are built and the run has earned `REBUILD_GOAL(k)`
+sparks (1B, then ×5 each rebuild). Resets sparks, gear levels, tools, pressure
+and upgrades except `KEEP_UPS` (shop, trading post). **Mastery is never reset.**
+Pays blueprints: `2 × cbrt(run sparks / 1B)` plus one per 10 questions mastered
+for the first time ever (`S.masteredEver`, so nothing pays twice). Each blueprint
+earned adds `BP_BONUS` (5%) to gear output for good; spending them on `PERKS`
+does not remove it.
+
+Pacing measured with a simulated student (8 s an answer, 85% right, buying
+everything at once): first rebuild at about 650 answers, then one every
+650-1,000 answers. `REBUILD_GOAL` is the knob.
+
 ## What the game shares with the site
 
 Both pages are on the same origin, so they share `localStorage`:

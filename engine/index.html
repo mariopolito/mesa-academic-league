@@ -297,6 +297,23 @@ details.how b{color:var(--text)}
 .tradedeal b{color:var(--spark)}
 .tradewhy{color:var(--miss);font-weight:600}
 
+/* Rebuild */
+.rbintro{margin:0;color:var(--muted);font-size:14px}
+.rbintro b{color:var(--go)}
+.rbreq{display:flex;flex-direction:column;gap:4px;background:var(--plate);border:1px solid var(--line);border-radius:6px;padding:8px 12px;font-size:14px}
+.rbreq em{font-style:normal;color:var(--muted);font-variant-numeric:tabular-nums;margin-left:6px}
+.rbreq .ok{color:var(--go);font-weight:800} .rbreq .no{color:var(--muted)}
+.rbgain{font-size:14px;color:var(--text)}
+.rbgain b{font:800 26px/1 var(--stencil);color:var(--spark);margin-right:4px}
+.rbgain em{display:block;font-style:normal;color:var(--muted);font-size:12px}
+.rbcols{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rbcols h4{margin:0;font:700 11px/1.3 var(--ui);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.rbcols p{margin:2px 0 0;font-size:13px}
+.rbgo{display:flex;flex-direction:column;gap:8px}
+.rbgo #rbGo{align-self:flex-start;font-size:15px;padding:9px 18px}
+.rbnote{margin:0 0 4px;color:var(--muted);font-size:13px}
+.gear.gilded:not(.locked) svg path:first-child{stroke:var(--spark);stroke-width:1.2}
+
 /* Reset */
 .reset{border-top:1px solid var(--line);padding-top:10px}
 .resetask{background:#2a1c1a;border:1px solid var(--miss);border-radius:6px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
@@ -404,6 +421,7 @@ h3.sec{font:800 18px/1 var(--stencil);letter-spacing:.08em;text-transform:upperc
       <p><b>A right answer moves on by itself.</b> Miss one and the right answer lights up: tap it to go on.</p>
       <p><b>Tools</b> turn up as you play: after a right answer now and then, every 10 in a row, with golden prizes and with achievements. 50/50 and Cross out take away wrong answers, Second chance waits until you pick a wrong one, Swap trades the question without breaking your streak, and Double up doubles your next 5 answers. A question answered with a hint, 50/50, Cross out or Second chance still pays, but does not count toward mastering it. You can hold 9 of each tool at first, and the toolbox upgrades raise that to 99. A tool earned when its slot is full is sold for sparks. From level 21, each gear level also costs one of every tool (two of each from level 31, and so on), so you need all five kinds. The <b>Tool shop</b> upgrade lets you buy and sell tools, and the <b>Trading post</b> lets you swap the ones you have plenty of for the ones you are short of.</p>
       <p><b>Hints</b> unlock 5 seconds into a question.</p>
+      <p><b>Rebuild the Engine.</b> Once every gear is built and you have earned 1 billion sparks in a run, you can rebuild: sparks, gear levels, tools and most upgrades start over, but <b>your mastery stays</b>, along with achievements, the Tool shop and the Trading post. A rebuild pays <b>blueprints</b>: each one ever earned adds 5% to what your gears make, and they buy permanent perks. Each rebuild asks for five times the sparks of the last.</p>
       <p><b>Golden questions</b> turn up about once in every 50, in any topic. They are the tip-offs. Get one right to win a jackpot of sparks or 60 seconds of overdrive, when every gear makes 5×.</p>
     </details>
   </div>
@@ -413,6 +431,7 @@ h3.sec{font:800 18px/1 var(--stencil);letter-spacing:.08em;text-transform:upperc
       <button class="tab" role="tab" id="tab-gears" data-tab="gears" type="button">Gears</button>
       <button class="tab" role="tab" id="tab-ups" data-tab="ups" type="button">Upgrades</button>
       <button class="tab" role="tab" id="tab-shop" data-tab="shop" type="button" hidden>Shop</button>
+      <button class="tab" role="tab" id="tab-rebuild" data-tab="rebuild" type="button" hidden>Rebuild</button>
       <button class="tab" role="tab" id="tab-stats" data-tab="stats" type="button">Stats</button>
     </div>
     <div class="pane" id="pane-gears" role="tabpanel"></div>
@@ -432,6 +451,18 @@ h3.sec{font:800 18px/1 var(--stencil);letter-spacing:.08em;text-transform:upperc
           <button class="btn primary" type="button" id="tradeGo">Trade</button>
         </div>
       </div>
+    </div>
+    <div class="pane" id="pane-rebuild" role="tabpanel" hidden>
+      <div id="rbBody"></div>
+      <!-- Outside #rbBody, which is redrawn as sparks come in: a redraw must not eat the confirmation. -->
+      <div class="rbgo">
+        <button class="btn primary" type="button" id="rbGo" disabled>Rebuild the Engine</button>
+        <div class="resetask" id="rbAsk" hidden>
+          <label>Rebuild now? Sparks, gear levels, tools and upgrades start over. Your mastery, achievements and blueprints stay.</label>
+          <div class="resetrow"><button class="btn primary" type="button" id="rbYes">Yes, rebuild</button><button class="btn" type="button" id="rbNo">Not yet</button></div>
+        </div>
+      </div>
+      <div id="rbPerks"></div>
     </div>
     <div class="pane" id="pane-stats" role="tabpanel" hidden>
       <div id="statsBody"></div>
@@ -492,7 +523,37 @@ const GROWTH = 1.15;        // each extra level of a gear costs 15% more
 const RUST = 1.5/60;        // % shine lost per second by an unmastered gear (90% an hour)
 const FLOOR = 10;           // a gear never rusts below this
 const BOXMAX = 4;           // right answers to master a question
-const GOLDEN_ODDS = 50;     // one question in this many is golden
+const GOLDEN_ODDS = 50;     // one question in this many is golden (40 with the Golden touch perk)
+
+/* ---------- Rebuild the Engine (prestige) ----------
+   Once every gear is built and this run has earned enough sparks, the engine
+   can be rebuilt: sparks, gear levels, tools and most upgrades go; MASTERY
+   STAYS, and so do achievements, stats, the Tool shop and the Trading post.
+   A rebuild pays blueprints, which never reset. Every blueprint ever earned
+   adds 5% to what gears make, and blueprints buy permanent perks. Mastery is
+   what makes the next run fast: a mastered gear is strong from the moment
+   it is rebuilt. */
+const REBUILD_GOAL = k => 1e9 * Math.pow(5, k);    // sparks this run: 1B, then 5B, 25B, ...
+const BP_BONUS = 0.05;                             // per blueprint earned, on everything gears make
+const KEEP_UPS = ["shop", "trade"];                // never reset
+const PERKS = [
+  {id:"kit",    name:"Starter kit",   cost:2, does:"Every rebuild starts with State capitals at level 10 and 3 of every tool."},
+  {id:"golden", name:"Golden touch",  cost:3, does:"Golden questions come about once in every 40, not 50."},
+  {id:"box",    name:"Deep toolbox",  cost:3, does:"Your toolbox upgrades survive a rebuild."},
+  {id:"boiler", name:"Warm boiler",   cost:4, does:"The pressure gauge never drops below Warm."},
+  {id:"time",   name:"Time dilation", cost:4, does:"Buzzer reflexes pays double for answers under 9 seconds, not 5, so there is time to use a hint and still earn it."},
+];
+const runSparks = () => S.tot - (S.runStartTot || 0);
+const allBuilt = () => TOPICS.every(t=>S.w[t.id] && S.w[t.id].n > 0);
+const canRebuild = () => allBuilt() && runSparks() >= REBUILD_GOAL(S.rebuilds);
+// Sparks count on a shrinking scale (2 per cube root of billions); new mastery counts in full.
+const bpFromSparks = () => Math.floor(2 * Math.cbrt(runSparks() / 1e9));
+const bpFromMastery = () => Math.floor((S.runNewMastered || 0) / 10);
+const bpGain = () => bpFromSparks() + bpFromMastery();
+const reflexSecs = () => S.perks.time ? 9 : 5;
+const goldenOdds = () => S.perks.golden ? 40 : GOLDEN_ODDS;
+const MARKS = ["I","II","III","IV","V","VI","VII","VIII","IX","X"];
+const mark = () => MARKS[Math.min(S.rebuilds, MARKS.length - 1)];
 const OVERDRIVE = {secs:60, mult:5};
 const AWAY = {rate:0.1, maxSecs:8*3600};   // gears earn a tenth while you're gone, for up to 8 hours
 /* Study time on the main site. The site notes each minute the student is really
@@ -526,7 +587,7 @@ const UPS = [
     req:()=>[toolsHeld(),49], txt:"Hold 49 tools in all"},
   {id:"box5", after:"box4", name:"Tool warehouse", does:"Hold up to 99 of each tool, the most there is.", cost:2.5e7,
     req:()=>[toolsHeld(),74], txt:"Hold 74 tools in all"},
-  {id:"reflex", name:"Buzzer reflexes", does:"A right answer in under 5 seconds earns double.", cost:4000,
+  {id:"reflex", name:"Buzzer reflexes", does:()=>`A right answer in under ${reflexSecs()} seconds earns double.`, cost:4000,
     req:()=>[S.st.fast,10], txt:"Answer 10 right in under 5 seconds"},
   {id:"shop", name:"Tool shop", does:"Opens a shop where you can buy and sell tools.", cost:5000,
     req:()=>[S.st.used,10], txt:"Use 10 tools"},
@@ -613,6 +674,9 @@ const ACH = [
   {id:"mil", e:"💰",    name:"Millionaire",       desc:"Earn a million sparks in all.",            test:()=>S.tot>=1e6},
   {id:"top", e:"🥇", name:"Top gear",            desc:`Take a gear to level ${GEARMAX}.`,          test:()=>TOPICS.some(t=>maxed(t))},
   {id:"study", e:"📖", name:"Study buddy",         desc:"Study on the study site for an hour, in all, while away from the engine.", test:()=>S.st.studyMin>=60},
+  {id:"rebuilt", e:"🔁", name:"Rebuilt",            desc:"Rebuild the Engine for the first time.",   test:()=>S.rebuilds>=1},
+  {id:"mk5", e:"⭐",     name:"Mk V",               desc:"Rebuild the Engine four times.",            test:()=>S.rebuilds>=4},
+  {id:"architect", e:"📐", name:"Architect",        desc:"Own every blueprint perk.",                 test:()=>PERKS.every(k=>S.perks[k.id])},
   {id:"allups", e:"🚀", name:"Fully loaded",      desc:"Install every upgrade.",                   test:()=>UPS.every(u=>S.ups[u.id])},
   {id:"shine", e:"💎",  name:"Showroom shine",    desc:"Have 3 or more gears, all at full shine.", hidden:true,
     test:()=>ownedCount()>=3 && TOPICS.every(t=>!own(t.id) || S.w[t.id].f>=99.5)},
@@ -643,14 +707,15 @@ const ACH = [
    questions, then gears, mastery, sparks, upgrades, and tools. Secrets follow
    the same idea in their own section. An id left out goes to the end. */
 const ACH_ORDER = ["first","r100","r1000","s10","s25","s50","max","gold","gold10",
-  "build","five","all","top","m25","m100","m300","full","study","mil","allups",
+  "build","five","all","top","m25","m100","m300","full","study","mil","allups","rebuilt","mk5","architect",
   "used50","shop1","sell10","trader","set","box100","bigbox","mech",
   "speed","pure","goldrun","odrush","rescue","humble","tour","shine","rust","back","hoard","bargain","overflow","even"];
 
 /* ---------- state ---------- */
 const KEY = "mal-engine-v1";
 function fresh(){
-  return {sp:0, tot:0, w:{}, box:{}, streak:0, psi:0, name:"", asked:false, toured:false, ups:{}, mode:"mix", tab:"gears", recent:[],
+  return {rebuilds:0, bp:0, bpEarned:0, perks:{}, runStartTot:0, runNewMastered:0, masteredEver:{}, rbSeen:false,
+    sp:0, tot:0, w:{}, box:{}, streak:0, psi:0, name:"", asked:false, toured:false, ups:{}, mode:"mix", tab:"gears", recent:[],
     tools:{fifty:1, eraser:2, retry:1, swap:1, double:0},   // a starter kit, so the tools explain themselves
     armed:false, dbl:0, ach:{}, upSeen:{},
     st:{right:0, wrong:0, fast:0, best:0, secs:0, gold:0, goldSeen:0, used:0,
@@ -659,12 +724,21 @@ function fresh(){
     od:0, last:Date.now()};
 }
 let S = fresh();
-try{ const raw = localStorage.getItem(KEY); if(raw) S = Object.assign(fresh(), JSON.parse(raw)); }catch(e){}
+try{
+  const raw = localStorage.getItem(KEY);
+  if(raw){
+    const o = JSON.parse(raw); S = Object.assign(fresh(), o);
+    /* A save from before rebuilding existed: whatever is mastered now was
+       earned in this first run, so it counts toward the first rebuild. */
+    if(!("masteredEver" in o)){ for(const k in S.box) if(S.box[k] >= BOXMAX) S.masteredEver[k] = 1; S.runNewMastered = Object.keys(S.masteredEver).length; }
+  }
+}catch(e){}
 S.st = Object.assign(fresh().st, S.st);
 S.tools = Object.assign(Object.fromEntries(TOOLS.map(t=>[t.id,0])), S.tools);
 // Every gear has a record from the start, including gears added after a save was made.
 function fillGears(){ TOPICS.forEach(t=>{ S.w[t.id] = S.w[t.id] || {n:0, f:100}; }); }
 fillGears();
+S.perks = S.perks || {};
 function save(){ S.last = Date.now(); try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
 
 /* ---------- rules ---------- */
@@ -678,7 +752,7 @@ function price(t){ const n = S.w[t.id] ? S.w[t.id].n : 0; return Math.ceil(t.cos
 function rate(t){
   if(!own(t.id)) return 0;
   const w = S.w[t.id], m = mastery(t.id);
-  return t.base * w.n * (1 + (S.ups.photo?8:4)*m) * (w.f/100) * (S.ups.round?2:1) * odMult();
+  return t.base * w.n * (1 + (S.ups.photo?8:4)*m) * (w.f/100) * (S.ups.round?2:1) * odMult() * (1 + BP_BONUS * (S.bpEarned || 0));
 }
 const psiMax = () => S.ups.streak ? 40 : 20;
 const zoneOf = p => Math.min(ZONES.length - 1, Math.floor(p / (psiMax() / ZONES.length)));
@@ -775,7 +849,7 @@ function pickItem(all){
 
 function nextQuestion(){
   if(CUR && CUR.timer) clearTimeout(CUR.timer);
-  const gold = GOLD.length > 0 && !(CUR && CUR.gold) && Math.random() < 1/GOLDEN_ODDS;
+  const gold = GOLD.length > 0 && !(CUR && CUR.gold) && Math.random() < 1/goldenOdds();
   const it = pickItem(gold ? GOLD : BY[pickTopic()]);
   S.recent.push(it.id); if(S.recent.length > 20) S.recent.shift();
   CUR = {it, gold, opts: shuffle([it.a, ...it.o]), gone:new Set(), done:false, hint:false, helped:false, rescued:false,
@@ -956,7 +1030,7 @@ function answer(i){
     save(); paintTools(); return;
   }
   CUR.done = true; CUR.gradedAt = performance.now();
-  const secs = (CUR.gradedAt - CUR.t0)/1000, fast = secs < 5;
+  const secs = (CUR.gradedAt - CUR.t0)/1000, fast = secs < reflexSecs();
   btns.forEach((b,j)=>{
     const right = CUR.opts[j] === it.a;
     if(right) b.classList.add("right"); else if(j === i) b.classList.add("wrong");
@@ -991,6 +1065,7 @@ function answer(i){
       const w = S.w[it.t], was = w.f; w.f = Math.min(100, w.f + (S.ups.polish?35:20));
       if(w.f > was + .5) extra.push(`${t.name} polished to ${Math.round(w.f)}% shine.`);
     }
+    if(before < BOXMAX && S.box[it.id] === BOXMAX && !S.masteredEver[it.id]){ S.masteredEver[it.id] = 1; S.runNewMastered++; }
     if(before < BOXMAX && S.box[it.id] === BOXMAX){ news = true;
       extra.push(S.name ? `${esc(S.name)}, you've mastered this question.` : "You've mastered this question."); }
     if(S.streak % 10 === 0){ news = true;
@@ -1000,7 +1075,8 @@ function answer(i){
   } else {
     if(box(it.id) >= BOXMAX) st.humble = 1;
     S.streak = 0; st.wrong++; st.fastRun = 0; st.cleanRun = 0;
-    if(S.psi > 0){ S.psi = Math.max(0, S.psi - psiMax() / ZONES.length); vent(); }
+    const psiFloor = S.perks.boiler ? psiMax() / ZONES.length : 0;   // Warm boiler
+    if(S.psi > psiFloor){ S.psi = Math.max(psiFloor, S.psi - psiMax() / ZONES.length); vent(); }
     if(CUR.gold) st.goldRun = 0;
     S.box[it.id] = Math.max(0, box(it.id) - 2);
     CUR.needTap = true;
@@ -1067,7 +1143,7 @@ function paintGears(){
     if(!visible(t,i)){ hidden++; return; }
     S.w[t.id].seen = true;
     const n = S.w[t.id].n;
-    html += `<div class="gear${n?"":" locked"}" data-g="${t.id}" style="--gc:${LOOK[t.id].c}">
+    html += `<div class="gear${n?"":" locked"}${n && S.rebuilds ? " gilded" : ""}" data-g="${t.id}" style="--gc:${LOOK[t.id].c}">
       ${gearSVG(t.id)}
       <div class="gname"><b>${t.name}</b>${n >= GEARMAX ? `<span class="maxbadge">Maxed</span>` : ""}<span data-k="lvl">${n ? "Level " + n : "Not built"} · ${BY[t.id].length} questions</span></div>
       <div class="gbtns">
@@ -1127,7 +1203,7 @@ function paintUps(){
   /* The first time an upgrade can be bought, open the tab and light it up. */
   let jump = false;
   const ready1 = UPS.find(u=>{ const [h,n]=u.req(); return upShown(u) && !S.ups[u.id] && !S.upSeen[u.id] && h>=n && S.sp>=u.cost; });
-  if(ready1){ S.upSeen[ready1.id] = true; UPFRESH = ready1.id; jump = true; toast("Upgrade ready", ready1.name, ready1.does); save(); }
+  if(ready1){ S.upSeen[ready1.id] = true; UPFRESH = ready1.id; jump = true; toast("Upgrade ready", ready1.name, typeof ready1.does === "function" ? ready1.does() : ready1.does); save(); }
   // Rebuild only when something shown changes, so a click is never lost mid-repaint.
   const sig = UPFRESH + "|" + UPS.map(u=>{ const [h,n]=u.req(); return [S.ups[u.id]?1:0, Math.min(h,n), S.sp>=u.cost?1:0].join(":"); }).join();
   if(sig === lastUpSig && !jump) return; lastUpSig = sig;
@@ -1138,7 +1214,7 @@ function paintUps(){
     if(!done && met && S.sp >= u.cost) ready = true;
     html += `<div class="up${done?" done":""}${u.id===UPFRESH && !done?" fresh":""}" data-u="${u.id}">
       <b>${u.name}</b>
-      <p>${u.does}</p>
+      <p>${typeof u.does === "function" ? u.does() : u.does}</p>
       ${done ? `<p class="req met">Installed</p>` : u.txt ? `<p class="req${met?" met":""}">${met?"✓ ":""}${u.txt}${met?"":` · ${fmt(Math.min(have,need))} / ${fmt(need)}`}</p>` : ""}
       ${done ? "" : `<button class="btn primary" type="button" data-up="${u.id}" ${met && S.sp>=u.cost ? "" : "disabled"}>${fmt(u.cost)}</button>`}
     </div>`;
@@ -1159,6 +1235,7 @@ function paintStats(){
     [`${S.st.gold} / ${S.st.goldSeen}`, "golden questions won"],
     [`${toolsHeld()} / ${toolCap() * TOOLS.length}`, "tools in your toolbox"],
     [dur(S.st.secs), "time at the engine"],
+    [`Mk ${mark()}`, `engine mark · ${S.bpEarned} blueprint${S.bpEarned === 1 ? "" : "s"} earned`],
   ];
   /* Known achievements first, in the order a player meets them; the secrets
      get their own section underneath, so the ??? tiles never break up the list
@@ -1239,6 +1316,12 @@ function paintAll(){
   if(sig !== lastGearSig){ lastGearSig = sig; paintGears(); } else tickGears();
   paintUps();
   $("#tab-shop").hidden = !S.ups.shop;
+  // The Rebuild tab appears once every gear is built, and stays after a first rebuild.
+  const rbOpen = S.rebuilds > 0 || allBuilt();
+  $("#tab-rebuild").hidden = !rbOpen;
+  $("#tab-rebuild").innerHTML = "Rebuild" + (canRebuild() ? '<span class="dot" title="You can rebuild"></span>' : "");
+  if(canRebuild() && !S.rbSeen){ S.rbSeen = true; save(); toast("Ready to rebuild", "🔁 Rebuild the Engine", "Start over stronger, keeping your mastery. See the Rebuild tab."); }
+  if(S.tab === "rebuild") paintRebuild();
   if(S.tab === "shop"){ paintShop(); paintTrade(); }
   if(S.tab === "stats") paintStats();
 }
@@ -1274,6 +1357,63 @@ $("#tradeGive").addEventListener("change", paintTrade);
 $("#tradeGet").addEventListener("change", paintTrade);
 $("#tradeGo").addEventListener("click", doTrade);
 
+/* ---------- Rebuild the Engine ---------- */
+function doRebuild(){
+  if(!canRebuild()) return;
+  const gain = bpGain(), was = mark();
+  S.bp += gain; S.bpEarned += gain; S.rebuilds++;
+  S.sp = 0; S.runStartTot = S.tot; S.runNewMastered = 0;
+  TOPICS.forEach(t=>{ S.w[t.id] = {n:0, f:100, seen:S.w[t.id].seen}; });
+  const keep = KEEP_UPS.concat(S.perks.box ? BOXUPS : []);
+  Object.keys(S.ups).forEach(id=>{ if(!keep.includes(id)) delete S.ups[id]; });
+  S.tools = fresh().tools; S.armed = false; S.dbl = 0; S.od = 0; S.streak = 0;
+  if(S.perks.kit){ S.w.cap.n = 10; TOOLS.forEach(t=>{ S.tools[t.id] = Math.min(toolCap(), held(t.id) + 3); }); }
+  S.psi = S.perks.boiler ? psiMax() / ZONES.length : 0;
+  save(); lastGearSig = ""; lastUpSig = ""; lastShop = ""; lastGauge = ""; lastRebuild = ""; lastPerks = "";
+  paintPlate(); setTab("gears"); nextQuestion(); paintAll(); paintTools();
+  toast("Engine rebuilt", `Mk ${was} → Mk ${mark()}`, `You earned ${gain} blueprint${gain === 1 ? "" : "s"}. Your mastery came with you.`);
+  checkAch();
+}
+let lastRebuild = "", lastPerks = "";
+function paintRebuild(){
+  const goal = REBUILD_GOAL(S.rebuilds), built = TOPICS.filter(t=>S.w[t.id].n > 0).length;
+  const sig = [built, fmt(runSparks()), bpGain(), S.rebuilds, S.perks.box ? 1 : 0].join("|");
+  const psig = [S.bp, S.bpEarned, Object.keys(S.perks).join()].join("|");
+  if(sig === lastRebuild && psig === lastPerks) return;
+  const bodyChanged = sig !== lastRebuild, perksChanged = psig !== lastPerks;
+  lastRebuild = sig; lastPerks = psig;
+  const tick = ok => ok ? `<span class="ok">✓</span>` : `<span class="no">○</span>`;
+  $("#rbGo").disabled = !canRebuild();
+  if(bodyChanged) $("#rbBody").innerHTML = `
+    <p class="rbintro">Start again with a stronger engine. <b>Your mastery stays</b>, so gears you know well are strong from the moment you rebuild them.</p>
+    <div class="rbreq">
+      <div>${tick(built === TOPICS.length)} Build all 10 gears <em>${built} / 10</em></div>
+      <div>${tick(runSparks() >= goal)} Earn ${fmt(goal)} sparks this run <em>${fmt(runSparks())} / ${fmt(goal)}</em></div>
+    </div>
+    <div class="rbgain"><b>${bpGain()}</b> blueprint${bpGain() === 1 ? "" : "s"} if you rebuild now
+      <em>${bpFromSparks()} from sparks · ${bpFromMastery()} from ${S.runNewMastered} questions newly mastered this run</em></div>
+    <div class="rbcols">
+      <div><h4>Starts over</h4><p>Sparks, gear levels, tools, and upgrades${S.perks.box ? " (toolbox sizes stay)" : ""}.</p></div>
+      <div><h4>Comes with you</h4><p>Mastery, achievements, stats, the Tool shop and the Trading post, and your blueprints.</p></div>
+    </div>`;
+  if(perksChanged) $("#rbPerks").innerHTML = `<h3 class="sec">Blueprints · ${S.bp} to spend</h3>
+    <p class="rbnote">You have earned ${S.bpEarned} in all, and each one adds ${Math.round(BP_BONUS*100)}% to everything your gears make (+${Math.round(BP_BONUS*100*S.bpEarned)}% now). Spending them doesn't take that away.</p>` +
+    PERKS.map(k=>`<div class="up${S.perks[k.id] ? " done" : ""}"><b>${k.name}</b><p>${k.does}</p>
+      ${S.perks[k.id] ? `<p class="req met">Yours</p>` : `<button class="btn primary" type="button" data-perk="${k.id}" ${S.bp >= k.cost ? "" : "disabled"}>${k.cost} blueprint${k.cost > 1 ? "s" : ""}</button>`}</div>`).join("");
+}
+function rebuildAsk(open){ $("#rbAsk").hidden = !open; $("#rbGo").hidden = open; }
+$("#rbGo").addEventListener("click", ()=>{ if(canRebuild()) rebuildAsk(true); });
+$("#rbNo").addEventListener("click", ()=>rebuildAsk(false));
+$("#rbYes").addEventListener("click", ()=>{ rebuildAsk(false); doRebuild(); });
+$("#rbPerks").addEventListener("click", e=>{
+  const b = e.target.closest("[data-perk]"); if(!b) return;
+  const k = PERKS.find(x=>x.id === b.dataset.perk);
+  if(S.perks[k.id] || S.bp < k.cost) return;
+  S.bp -= k.cost; S.perks[k.id] = true;
+  if(k.id === "boiler") S.psi = Math.max(S.psi, psiMax() / ZONES.length);
+  lastPerks = ""; lastUpSig = ""; save(); paintRebuild(); paintUps(); paintGauge(); checkAch();
+});
+
 /* ---------- the tool shop ---------- */
 let lastShop = "";
 function paintShop(){
@@ -1294,7 +1434,8 @@ function paintShop(){
 function setTab(tab){
   S.tab = tab;
   document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected", b.dataset.tab===tab));
-  ["gears","ups","shop","stats"].forEach(k=>$("#pane-"+k).hidden = k!==tab);
+  ["gears","ups","shop","rebuild","stats"].forEach(k=>$("#pane-"+k).hidden = k!==tab);
+  if(tab === "rebuild"){ lastRebuild = ""; lastPerks = ""; paintRebuild(); }
   if(tab === "shop"){ lastShop = ""; paintShop(); paintTrade(); }
   if(tab === "stats") paintStats();
 }
@@ -1307,7 +1448,8 @@ const hashStr=t=>{let h=2166136261;for(let i=0;i<String(t).length;i++){
   h^=String(t).charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;};
 const rudeName = t => String(t).toLowerCase().replace(/[^a-z]+/g," ").split(" ").some(w=>w&&RUDE.has(hashStr(w)));
 function paintPlate(){
-  $("#plate").innerHTML = S.name ? `<b>${esc(S.name)}</b>'s engine · Mesa Academic League` : "Mesa Academic League · put your name on it";
+  const mk = S.rebuilds ? ` · Mk ${mark()}` : "";
+  $("#plate").innerHTML = S.name ? `<b>${esc(S.name)}</b>'s engine${mk} · Mesa Academic League` : `Mesa Academic League${mk} · put your name on it`;
   $("#plate").title = S.name ? "Change the name on the nameplate" : "Put your name on the nameplate";
 }
 /* A student who already gave the study site a name on this computer is not
@@ -1368,7 +1510,7 @@ const TOUR = [
   {e:"🧠", t:"Mastery is the real engine",
    p:()=>`Get a question right <b>four times, on your own</b>, to master it. Mastery makes a gear up to <b>5× stronger</b> and slows its rust. Hints and tools still earn sparks, but they don't count toward mastery.`},
   {e:"🌡️", t:"And a few extras",
-   p:()=>`The <b>pressure gauge</b> multiplies every answer; a miss drops it one zone. <b>★ Golden questions</b> win jackpots or overdrive. Tools, upgrades and achievements unlock as you play. The full guide is under <b>How the engine works</b>.`},
+   p:()=>`The <b>pressure gauge</b> multiplies every answer; a miss drops it one zone. <b>★ Golden questions</b> win jackpots or overdrive. Tools, upgrades and achievements unlock as you play, and once every gear is built you can <b>Rebuild the Engine</b>, keeping your mastery. The full guide is under <b>How the engine works</b>.`},
 ];
 let TOURAT = 0;
 function paintTour(){
