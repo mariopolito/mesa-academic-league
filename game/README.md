@@ -62,6 +62,14 @@ Pacing measured with a simulated student (8 s an answer, 85% right, buying
 everything at once): first rebuild at about 650 answers, then one every
 650-1,000 answers. `REBUILD_GOAL` is the knob.
 
+## Animations
+
+Stats has an Animations setting: Device setting (the default: follows
+`prefers-reduced-motion`, which Windows sets from *Animation effects*), On, or
+Off. `applyMotion()` puts `body.still` on or off, and every animation that
+should stop is written under `body.still` -- **never under a
+`prefers-reduced-motion` media query**, or the On setting cannot override it.
+
 ## What the game shares with the site
 
 Both pages are on the same origin, so they share `localStorage`:

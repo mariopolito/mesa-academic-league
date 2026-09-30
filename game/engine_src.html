@@ -245,9 +245,10 @@ details.how b{color:var(--text)}
 .danger{color:var(--miss)}
 
 /* Hint and tools */
-.toolbar{display:flex;gap:6px;flex-wrap:wrap}
+.toolbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.toollabel{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-right:4px}
 .tool{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line);background:var(--plate-2);border-radius:4px;
-  padding:5px 9px;font:700 13px/1.2 var(--ui)}
+  padding:5px 8px;font:700 13px/1.2 var(--ui)}
 @media (hover:hover){ .tool:hover:not(:disabled){border-color:var(--brass)} }
 .tool:disabled{opacity:.4;cursor:default}
 .tool i{font:700 11px/17px var(--ui);font-style:normal;min-width:17px;text-align:center;border-radius:9px;background:var(--iron);color:var(--spark)}
@@ -255,6 +256,7 @@ details.how b{color:var(--text)}
 .tool em{font-style:normal;font-weight:600;font-size:11px;color:var(--muted)}
 .tool.on{border-color:var(--go);color:var(--go)}
 /* One width for every state (countdown, ready, used), so the toolbar never shifts as it counts down. */
+#hintBtn{margin-left:auto}
 .tool[data-tool="hint"]{width:7.8em;justify-content:center;font-variant-numeric:tabular-nums;white-space:nowrap}
 .tool.bump{animation:bump .6s ease-out}
 @keyframes bump{30%{transform:scale(1.18);border-color:var(--spark)}}
@@ -351,7 +353,22 @@ h3.sec{font:800 18px/1 var(--stencil);letter-spacing:.08em;text-transform:upperc
   .meter b{font-size:32px}
 }
 @media (pointer:coarse){ .opt{min-height:54px} .btn{padding:10px 14px} select{font-size:16px} }
-@media (prefers-reduced-motion:reduce){ .gear svg g,.gear:hover svg{animation:none!important} .float{animation:none;opacity:0} .odbadge,.tool.bump,.opt.tapme,.up.fresh,.toast,.gauge.flash,.gear.mirror svg{animation:none} .vent{display:none} .gauge #gNeedle{transition:none} }
+/* Animations off. body.still is set by applyMotion(): the student's own choice
+   in Stats, or, left on "Device setting", the device's reduce-motion setting. */
+body.still .gear svg g,body.still .gear:hover svg{animation:none!important}
+body.still .float{animation:none;opacity:0}
+body.still .odbadge,body.still .tool.bump,body.still .opt.tapme,body.still .up.fresh,body.still .toast,
+body.still .gauge.flash,body.still .gear.mirror svg{animation:none}
+body.still .vent{display:none}
+body.still .gauge #gNeedle{transition:none}
+/* The setting itself */
+.settings{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:10px}
+.settings > span{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:5px;overflow:hidden}
+.seg button{background:var(--plate-2);border:0;border-right:1px solid var(--line);padding:6px 12px;font:700 13px var(--ui);color:var(--muted)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--brass);color:#1b1608}
+.settings small{color:var(--muted);font-size:12px}
 </style>
 <!--BODY-->
 <header class="top"><div class="top-in">
@@ -406,8 +423,9 @@ h3.sec{font:800 18px/1 var(--stencil);letter-spacing:.08em;text-transform:upperc
       <div class="crow">
         <label for="mode">Polish</label>
         <select id="mode"></select>
+        <button class="tool" type="button" data-tool="hint" id="hintBtn">Hint</button>
       </div>
-      <div class="toolbar" id="tools" aria-label="Hint and tools"></div>
+      <div class="toolbar" id="tools" aria-label="Tools"></div>
       <div class="crow" id="qmeta"></div>
       <div class="qtext" id="qtext"></div>
       <div id="hintBox"></div>
@@ -471,6 +489,16 @@ h3.sec{font:800 18px/1 var(--stencil);letter-spacing:.08em;text-transform:upperc
     </div>
     <div class="pane" id="pane-stats" role="tabpanel" hidden>
       <div id="statsBody"></div>
+      <!-- Outside #statsBody too, so the redraw leaves the buttons alone. -->
+      <div class="settings">
+        <span>Animations</span>
+        <div class="seg" role="group" aria-label="Animations">
+          <button type="button" data-motion="auto">Device setting</button>
+          <button type="button" data-motion="on">On</button>
+          <button type="button" data-motion="off">Off</button>
+        </div>
+        <small id="motionNote"></small>
+      </div>
       <p class="keys">Progress is saved in this browser only.</p>
       <!-- Outside #statsBody, which is redrawn every second: a redraw would wipe what is typed here. -->
       <div class="reset" id="resetBox">
@@ -730,7 +758,7 @@ const ACH_ORDER = ["first","r100","r1000","s10","s25","s50","max","gold","gold10
 /* ---------- state ---------- */
 const KEY = "mal-engine-v1";
 function fresh(){
-  return {rebuilds:0, bp:0, bpEarned:0, perks:{}, runStartTot:0, runNewMastered:0, masteredEver:{}, rbSeen:false,
+  return {motion:"auto", rebuilds:0, bp:0, bpEarned:0, perks:{}, runStartTot:0, runNewMastered:0, masteredEver:{}, rbSeen:false,
     sp:0, tot:0, w:{}, box:{}, streak:0, psi:0, name:"", asked:false, toured:false, ups:{}, mode:"mix", tab:"gears", recent:[],
     tools:{fifty:1, eraser:2, retry:1, swap:1, double:0},   // a starter kit, so the tools explain themselves
     armed:false, dbl:0, ach:{}, upSeen:{},
@@ -851,11 +879,16 @@ let CUR = null;   // {it, gold, opts, gone, done, hint, helped, rescued, needTap
 
 function pickTopic(){
   if(S.mode !== "mix") return S.mode;
-  // Rusty gears you own come up most; topics you don't own yet still turn up.
-  const ws = TOPICS.map(t => own(t.id) ? 6 + (100 - S.w[t.id].f) : 5);
+  /* Only the gears you own, the rustiest most often. Before the first gear is
+     built there is nothing to polish, so it draws from the gears you have
+     discovered (at the very start, State capitals: the one to build first).
+     Shine above 100% (Mirror polish) counts as no rust at all. */
+  const owned = TOPICS.filter(t=>own(t.id));
+  const pool = owned.length ? owned : TOPICS.filter((t,i)=>visible(t,i));
+  const ws = pool.map(t => own(t.id) ? 6 + Math.max(0, 100 - S.w[t.id].f) : 1);
   let r = Math.random() * ws.reduce((a,b)=>a+b,0);
-  for(let i=0;i<TOPICS.length;i++){ r -= ws[i]; if(r <= 0) return TOPICS[i].id; }
-  return TOPICS[0].id;
+  for(let i=0;i<pool.length;i++){ r -= ws[i]; if(r <= 0) return pool[i].id; }
+  return pool[0].id;
 }
 function pickItem(all){
   const keep = Math.min(10, all.length - 1);
@@ -965,16 +998,16 @@ function paintTools(){
   const bump = BUMP; BUMP = null;
   const live = CUR && !CUR.done;
   const left = CUR ? CUR.opts.length - CUR.gone.size : 0;
-  let h = `<button class="tool" type="button" data-tool="hint">Hint</button>`;
+  let h = `<span class="toollabel">Tools</span>`;
   TOOLS.forEach(t=>{
     const n = S.tools[t.id] || 0;
-    let ok = n > 0, on = false, label = t.name;
+    let ok = n > 0, on = false, label = t.name, title_extra = "";
     if(t.id === "fifty")  ok = ok && live && left === 4;
     if(t.id === "eraser") ok = ok && live && left > 2;
     if(t.id === "swap")   ok = ok && live;
-    if(t.id === "retry" && S.armed){ ok = false; on = true; label = "Second chance ready"; }
-    if(t.id === "double" && S.dbl > 0){ on = true; label = `Double up · ${S.dbl} left`; }
-    h += `<button class="tool${on?" on":""}${bump===t.id?" bump":""}" type="button" data-tool="${t.id}" title="${t.name}: ${t.does} You hold ${n} of ${toolCap()}." ${ok?"":"disabled"}>${label}<i class="${n >= toolCap() ? "full" : ""}">${n}</i></button>`;
+    if(t.id === "retry" && S.armed){ ok = false; on = true; label = "Second chance ✓"; title_extra = " It's armed: your next wrong pick gets another try."; }
+    if(t.id === "double" && S.dbl > 0){ on = true; label = `Double up · ${S.dbl}`; title_extra = ` ${S.dbl} doubled answer${S.dbl === 1 ? "" : "s"} left.`; }
+    h += `<button class="tool${on?" on":""}${bump===t.id?" bump":""}" type="button" data-tool="${t.id}" title="${t.name}: ${t.does}${title_extra} You hold ${n} of ${toolCap()}." ${ok?"":"disabled"}>${label}<i class="${n >= toolCap() ? "full" : ""}">${n}</i></button>`;
   });
   $("#tools").innerHTML = h;
   paintHint();
@@ -983,7 +1016,7 @@ function paintTools(){
    without a redraw swallowing a click on a tool beside it. */
 let lastHint = "";
 function paintHint(){
-  const b = $('#tools [data-tool="hint"]'); if(!b) return;
+  const b = $("#hintBtn"); if(!b) return;
   const live = CUR && !CUR.done, has = live && !CUR.hint && !!hintFor(CUR), wait = Math.ceil(hintWait());
   const state = !live || CUR.hint ? "off" : !has ? "none" : wait > 0 ? "wait" + wait : "ready";
   if(state === lastHint && b.dataset.s === state) return; lastHint = state; b.dataset.s = state;
@@ -1531,6 +1564,25 @@ function askName(){
 }
 $("#plate").addEventListener("click", askName);
 
+/* ---------- animations ----------
+   "Device setting" follows the computer's reduce-motion option (Windows:
+   Settings > Accessibility > Visual effects > Animation effects). "On" and
+   "Off" override it for this game only. */
+const REDUCE = window.matchMedia ? matchMedia("(prefers-reduced-motion: reduce)") : null;
+function applyMotion(){
+  const dev = !!(REDUCE && REDUCE.matches), m = S.motion || "auto";
+  const still = m === "off" || (m === "auto" && dev);
+  document.body.classList.toggle("still", still);
+  document.querySelectorAll("[data-motion]").forEach(b=>b.setAttribute("aria-pressed", b.dataset.motion === m));
+  $("#motionNote").textContent = m === "auto" ? (dev ? "Your device asks for less motion, so animations are off." : "Your device allows motion, so animations are on.") : "";
+}
+document.querySelector(".seg").addEventListener("click", e=>{
+  const b = e.target.closest("[data-motion]"); if(!b) return;
+  S.motion = b.dataset.motion; save(); applyMotion();
+});
+if(REDUCE && REDUCE.addEventListener) REDUCE.addEventListener("change", applyMotion);
+applyMotion();
+
 /* ---------- the first-time tour ----------
    Six short cards, shown once on a first visit (after the name question, if
    that comes up) and again from "How the engine works". */
@@ -1575,6 +1627,7 @@ document.addEventListener("keydown", e=>{
 
 /* ---------- events ---------- */
 $("#opts").addEventListener("click", e=>{ const b = e.target.closest(".opt"); if(b) answer(+b.dataset.i); });
+$("#hintBtn").addEventListener("click", ()=>{ if(!$("#hintBtn").disabled) showHint(); });
 $("#tools").addEventListener("click", e=>{ const b = e.target.closest("[data-tool]"); if(b && !b.disabled) useTool(b.dataset.tool); });
 $("#mode").addEventListener("change", e=>{ S.mode = e.target.value; save(); nextQuestion(); });
 document.querySelector(".tabs").addEventListener("click", e=>{ const b=e.target.closest(".tab"); if(b){ UPFRESH = null; lastUpSig = ""; setTab(b.dataset.tab); paintUps(); save(); } });
