@@ -267,6 +267,14 @@ details.how b{color:var(--text)}
 .opt.tapme{cursor:pointer;animation:tap .9s ease-in-out infinite alternate}
 @keyframes tap{to{box-shadow:0 0 0 3px rgba(91,181,146,.55)}}
 .verdict .tapnote{color:var(--go);font-weight:700}
+.opt.gonext{cursor:pointer}
+/* A new question slides in: the text, then the options, over ARRIVE ms. */
+.console.arrive #qtext{animation:arrive .3s ease-out}
+.console.arrive #opts .opt{animation:arrive .3s ease-out backwards}
+.console.arrive #opts .opt:nth-child(2){animation-delay:.05s}
+.console.arrive #opts .opt:nth-child(3){animation-delay:.1s}
+.console.arrive #opts .opt:nth-child(4){animation-delay:.15s}
+@keyframes arrive{from{opacity:0;transform:translateY(8px)}}
 .up.fresh{border-color:var(--spark);box-shadow:0 0 0 1px var(--spark),0 0 22px rgba(255,217,106,.3);animation:pulse 1s ease-in-out infinite alternate}
 
 /* Toasts */
@@ -360,7 +368,7 @@ h3.sec{font:800 18px/1 var(--stencil);letter-spacing:.08em;text-transform:upperc
    in Stats, or, left on "Device setting", the device's reduce-motion setting. */
 body.still .gear svg g,body.still .gear:hover svg{animation:none!important}
 body.still .float{animation:none;opacity:0}
-body.still .odbadge,body.still .tool.bump,body.still .opt.tapme,body.still .up.fresh,body.still .toast,
+body.still .console.arrive #qtext,body.still .console.arrive #opts .opt,body.still .odbadge,body.still .tool.bump,body.still .opt.tapme,body.still .up.fresh,body.still .toast,
 body.still .gauge.flash,body.still .gear.mirror svg{animation:none}
 body.still .vent{display:none}
 body.still .gauge #gNeedle{transition:none}
@@ -707,6 +715,11 @@ const GEARMAX = 100;
 const maxed = t => S.w[t.id].n >= GEARMAX;
 const DROP = 0.06;          // chance a right answer drops a tool
 const WAIT = {right:900, news:2200};   // ms before moving on: a plain right answer, and one with a prize or news
+/* A new question ignores answers for its first ARRIVE ms. Students tap the
+   right answer again to move on, and a tap that lands just as the next
+   question appears would otherwise answer it, sight unseen. The slide-in
+   lasts the same time, so the options become live as they settle. */
+const ARRIVE = 450;
 
 /* Achievements. `hidden` ones show as ??? until earned. Each one earned also gives a tool. */
 const ACH = [
@@ -964,6 +977,8 @@ function renderQuestion(){
   $("#hintBox").innerHTML = CUR.hint ? `<div class="hint">${hintFor(CUR) || ""}</div>` : "";
   $("#verdict").innerHTML = "";
   $("#opts").innerHTML = CUR.opts.map((o,i)=>`<button class="opt${CUR.gone.has(i) ? " gone" : ""}" type="button" data-i="${i}" ${CUR.gone.has(i) ? "disabled" : ""}><kbd>${i+1}</kbd><span>${o}</span></button>`).join("");
+  CUR.readyAt = performance.now() + ARRIVE;
+  const con = $("#console"); con.classList.remove("arrive"); void con.offsetWidth; con.classList.add("arrive");
   paintTools();
 }
 
@@ -1109,10 +1124,11 @@ function answerValue(it, fast){
 
 function answer(i){
   if(!CUR) return;
-  if(CUR.done){               // after a miss, tapping the right answer is how you move on
-    if(CUR.needTap && CUR.opts[i] === CUR.it.a && performance.now() - CUR.gradedAt > 300) nextQuestion();
+  if(CUR.done){               // tapping the right answer moves on: required after a miss, a shortcut after a hit
+    if(CUR.opts[i] === CUR.it.a && performance.now() - CUR.gradedAt > 300) nextQuestion();
     return;
   }
+  if(performance.now() < (CUR.readyAt || 0)) return;   // just arrived: a leftover tap, not an answer
   if(CUR.gone.has(i)) return;
   const {it} = CUR, ok = CUR.opts[i] === it.a, t = TOPIC[it.t];
   const btns = document.querySelectorAll("#opts .opt");
@@ -1123,13 +1139,15 @@ function answer(i){
     save(); paintTools(); return;
   }
   CUR.done = true; CUR.gradedAt = performance.now();
+  $("#console").classList.remove("arrive");   // or its animation outranks the tap-me pulse
   if(CUR.slot) delete S.pend[CUR.slot];   // answered: this topic deals a new one next time
   const secs = (CUR.gradedAt - CUR.t0)/1000, fast = secs < reflexSecs();
   btns.forEach((b,j)=>{
     const right = CUR.opts[j] === it.a;
     if(right) b.classList.add("right"); else if(j === i) b.classList.add("wrong");
-    b.disabled = ok || !right;
+    b.disabled = !right;
     if(!ok && right) b.classList.add("tapme");
+    if(ok && right) b.classList.add("gonext");
   });
   const st = S.st;
   let v = "", extra = [], news = false;
