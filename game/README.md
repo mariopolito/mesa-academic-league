@@ -62,6 +62,17 @@ Pacing measured with a simulated student (8 s an answer, 85% right, buying
 everything at once): first rebuild at about 650 answers, then one every
 650-1,000 answers. `REBUILD_GOAL` is the knob.
 
+## One question waits in each topic
+
+`S.pend` holds, per topic, the question dealt there until it is answered or
+swapped -- with its option order, hint, crossed-out answers, Second chance and
+time spent (`stash()`, called by `save()`). Switching topics, a gear's Polish
+button and a reload all bring it back as it was, so none of them is a free
+Swap, a way to shed a hint's half-sparks, or a way to restart the Buzzer
+reflexes clock. Only Swap (`nextQuestion(slot)`) deals a new one, in the same
+topic. **Anything that starts a new game must set `CUR = null` before it
+saves**, or the old question is stashed into the new one.
+
 ## Animations
 
 The Settings tab (with Reset) has an Animations setting: On (the default), Off,

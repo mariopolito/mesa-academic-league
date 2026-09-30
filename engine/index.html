@@ -764,6 +764,7 @@ const KEY = "mal-engine-v1";
 function fresh(){
   return {motion:"on", motionSet:false, rebuilds:0, bp:0, bpEarned:0, perks:{}, runStartTot:0, runNewMastered:0, masteredEver:{}, rbSeen:false,
     sp:0, tot:0, w:{}, box:{}, streak:0, psi:0, name:"", asked:false, toured:false, ups:{}, mode:"mix", tab:"gears", recent:[],
+    pend:{},   // topic -> the question waiting there, until it is answered or swapped
     tools:{fifty:1, eraser:2, retry:1, swap:1, double:0},   // a starter kit, so the tools explain themselves
     armed:false, dbl:0, ach:{}, upSeen:{},
     st:{right:0, wrong:0, fast:0, best:0, secs:0, gold:0, goldSeen:0, used:0,
@@ -791,7 +792,7 @@ S.tools = Object.assign(Object.fromEntries(TOOLS.map(t=>[t.id,0])), S.tools);
 function fillGears(){ TOPICS.forEach(t=>{ S.w[t.id] = S.w[t.id] || {n:0, f:100}; }); }
 fillGears();
 S.perks = S.perks || {};
-function save(){ S.last = Date.now(); try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+function save(){ stash(); S.last = Date.now(); try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
 
 /* ---------- rules ---------- */
 const own = id => (S.w[id] && S.w[id].n > 0);
@@ -909,14 +910,37 @@ function pickItem(all){
   return pool[Math.floor(Math.random()*pool.length)];
 }
 
-function nextQuestion(){
+/* One question waits in each topic until it is answered or swapped. Switching
+   topics -- the Polish menu, a gear's Polish button, a reload -- brings back
+   that topic's waiting question exactly as it was left: the same options in the
+   same order, any hint already taken (so its half-sparks still applies), any
+   answers already crossed out, and the time already spent, so Buzzer reflexes
+   cannot be had by looking, leaving and coming back. Only Swap deals a new one.
+   The slot is the topic the question was dealt for; a golden question waits in
+   the slot it turned up in. */
+const ITEM = Object.fromEntries(ITEMS.map(it=>[it.id, it]));
+function stash(){
+  if(!CUR || CUR.done || !CUR.slot) return;
+  S.pend[CUR.slot] = {id:CUR.it.id, gold:CUR.gold, opts:CUR.opts, gone:[...CUR.gone], hint:CUR.hint,
+    helped:CUR.helped, rescued:CUR.rescued, el:Math.round(performance.now() - CUR.t0)};
+}
+function nextQuestion(swapSlot){   // swapSlot: deal a new question in this topic, ignoring what waits there
   if(CUR && CUR.timer) clearTimeout(CUR.timer);
+  stash();
+  const slot = swapSlot || pickTopic(), p = !swapSlot && S.pend[slot], back = p && ITEM[p.id];
+  if(back && p.opts.length === back.o.length + 1){
+    CUR = {it:back, slot, gold:!!p.gold, opts:p.opts, gone:new Set(p.gone), done:false, hint:!!p.hint, helped:!!p.helped,
+      rescued:!!p.rescued, needTap:false, t0:performance.now() - (p.el || 0), gradedAt:0, timer:0};
+    renderQuestion();
+    return;
+  }
   const gold = GOLD.length > 0 && !(CUR && CUR.gold) && Math.random() < 1/goldenOdds();
-  const it = pickItem(gold ? GOLD : BY[pickTopic()]);
+  const it = pickItem(gold ? GOLD : BY[slot]);
   S.recent.push(it.id); if(S.recent.length > 20) S.recent.shift();
-  CUR = {it, gold, opts: shuffle([it.a, ...it.o]), gone:new Set(), done:false, hint:false, helped:false, rescued:false,
+  CUR = {it, slot, gold, opts: shuffle([it.a, ...it.o]), gone:new Set(), done:false, hint:false, helped:false, rescued:false,
     needTap:false, t0:performance.now(), gradedAt:0, timer:0};
   if(gold) S.st.goldSeen++;
+  stash();
   renderQuestion();
 }
 
@@ -930,9 +954,9 @@ function renderQuestion(){
     (it.c ? `<span class="chip cat">${esc(it.c)}</span>` : "") +
     `<span class="mbar" title="Right answers toward mastering this question: ${BOXMAX} to master it"><span>Mastery</span><span class="mtrack"><i id="mfill" style="width:${box(it.id)/BOXMAX*100}%"></i></span></span>`;
   $("#qtext").textContent = it.q;
-  $("#hintBox").innerHTML = "";
+  $("#hintBox").innerHTML = CUR.hint ? `<div class="hint">${hintFor(CUR) || ""}</div>` : "";
   $("#verdict").innerHTML = "";
-  $("#opts").innerHTML = CUR.opts.map((o,i)=>`<button class="opt" type="button" data-i="${i}"><kbd>${i+1}</kbd><span>${o}</span></button>`).join("");
+  $("#opts").innerHTML = CUR.opts.map((o,i)=>`<button class="opt${CUR.gone.has(i) ? " gone" : ""}" type="button" data-i="${i}" ${CUR.gone.has(i) ? "disabled" : ""}><kbd>${i+1}</kbd><span>${o}</span></button>`).join("");
   paintTools();
 }
 
@@ -1059,7 +1083,7 @@ function useTool(id){
   else if(id === "eraser"){ if(!live || wrong.length < 2) return; CUR.gone.add(shuffle(wrong)[0]); CUR.helped = true; }
   else if(id === "retry"){ if(S.armed) return; S.armed = true; }
   else if(id === "double"){ S.dbl += 5; }
-  else if(id === "swap"){ if(!live) return; S.tools.swap--; S.st.used++; save(); nextQuestion(); return; }
+  else if(id === "swap"){ if(!live) return; S.tools.swap--; S.st.used++; const was = CUR.slot; delete S.pend[was]; CUR.done = true; save(); nextQuestion(was); return; }
   S.tools[id]--; S.st.used++;
   document.querySelectorAll("#opts .opt").forEach((b,i)=>{ if(CUR.gone.has(i)){ b.classList.add("gone"); b.disabled = true; } });
   save(); paintTools(); checkAch();
@@ -1092,6 +1116,7 @@ function answer(i){
     save(); paintTools(); return;
   }
   CUR.done = true; CUR.gradedAt = performance.now();
+  if(CUR.slot) delete S.pend[CUR.slot];   // answered: this topic deals a new one next time
   const secs = (CUR.gradedAt - CUR.t0)/1000, fast = secs < reflexSecs();
   btns.forEach((b,j)=>{
     const right = CUR.opts[j] === it.a;
@@ -1637,7 +1662,7 @@ document.addEventListener("keydown", e=>{
 $("#opts").addEventListener("click", e=>{ const b = e.target.closest(".opt"); if(b) answer(+b.dataset.i); });
 $("#hintBtn").addEventListener("click", ()=>{ if(!$("#hintBtn").disabled) showHint(); });
 $("#tools").addEventListener("click", e=>{ const b = e.target.closest("[data-tool]"); if(b && !b.disabled) useTool(b.dataset.tool); });
-$("#mode").addEventListener("change", e=>{ S.mode = e.target.value; save(); nextQuestion(); });
+$("#mode").addEventListener("change", e=>{ stash(); S.mode = e.target.value; nextQuestion(); save(); });
 document.querySelector(".tabs").addEventListener("click", e=>{ const b=e.target.closest(".tab"); if(b){ UPFRESH = null; lastUpSig = ""; setTab(b.dataset.tab); paintUps(); save(); } });
 $("#pane-gears").addEventListener("click", e=>{
   const buy = e.target.closest("[data-buy]"), pr = e.target.closest("[data-polish]");
@@ -1650,7 +1675,7 @@ $("#pane-gears").addEventListener("click", e=>{
     if(k) paintTools();
     save(); paintAll(); checkAch();
   }
-  if(pr){ S.mode = pr.dataset.polish; $("#mode").value = S.mode; save(); nextQuestion(); $("#console").scrollIntoView({block:"nearest"}); }
+  if(pr){ stash(); S.mode = pr.dataset.polish; $("#mode").value = S.mode; nextQuestion(); save(); $("#console").scrollIntoView({block:"nearest"}); }
 });
 $("#pane-shop").addEventListener("click", e=>{
   const b = e.target.closest("[data-shopbuy]"), sl = e.target.closest("[data-shopsell]");
@@ -1687,7 +1712,8 @@ function doReset(){
   if(!resetTyped()) return;
   resetAsk(false);
   const pref = {motion:S.motion, motionSet:S.motionSet};   // a preference, not progress: it survives a reset
-  S = Object.assign(fresh(), pref); fillGears(); save(); lastGearSig = ""; lastUpSig = ""; lastGauge = ""; UPFRESH = null; paintPlate(); paintMode(); setTab("gears"); nextQuestion(); paintAll();
+  CUR = null;   // first, or the save below would stash the old question into the new game
+  S = Object.assign(fresh(), pref); fillGears(); save(); lastGearSig = ""; lastUpSig = ""; lastGauge = ""; UPFRESH = null; paintPlate(); paintMode(); setTab("gears"); CUR = null; nextQuestion(); paintAll();
   toast("Engine reset", "A fresh start", "Everything has been erased.");
 }
 $("#resetBtn").addEventListener("click", ()=>resetAsk(true));
