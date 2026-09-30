@@ -1085,6 +1085,8 @@ td.mot{font-family:var(--f-read);font-style:italic;color:var(--muted)}
   margin-top:50px;padding-top:20px;border-top:1px solid var(--line-soft);
   font-size:12px;color:var(--muted);display:flex;gap:16px;flex-wrap:wrap;
 }
+.foot .buglink{margin-left:auto;color:inherit;font-weight:700}
+.foot .buglink:hover{color:var(--text)}
 
 /* ============================================================
    SHORT-SCREEN LAYOUT
@@ -1392,6 +1394,7 @@ td.mot{font-family:var(--f-read);font-style:italic;color:var(--muted)}
 <div class="foot">
   <span>Built from the MAL Study Guide 26–27.</span>
   <span>Club sponsor: Meridith Tietz &middot; mdtietz@mpsaz.org</span>
+  <a class="buglink" id="bugLink" href="#" target="_blank" rel="noopener">Report a problem</a>
 </div>
 </main>
 
@@ -3047,6 +3050,25 @@ $("#nav").addEventListener("click",e=>{const b=e.target.closest(".ev");if(b)go(b
   };
   ["pointerdown","keydown","wheel","touchstart"].forEach(ev=>
     document.addEventListener(ev,mark,{passive:true,capture:true}));
+})();
+/* Report a problem: the Knowledge Engine's Google Form (game/bug_form.gs),
+   shared by both. __DETAILS__ is filled at the moment of the click with the
+   open event, the quarters and the screen and browser -- never the name or
+   the save. It is only a link: the page works the same without it. */
+(function bugLink(){
+  const FORM="https://docs.google.com/forms/d/e/1FAIpQLScNDOPQCtFlqeru8vgyYrk8Fo3KI2Jdg5H0C6tWFv7M7Uw_5w/viewform?usp=pp_url&entry.1377665333=__DETAILS__";
+  const a=$("#bugLink");if(!a)return;
+  a.addEventListener("click",()=>{
+    const on=document.querySelector(".panel.on"),h=on&&on.querySelector("h2");
+    const d=[
+      "Study site: "+(h?h.textContent.trim():"?")+" ("+(on?on.id:"?")+")",
+      "Quarters: "+(Array.from(ACTIVEQ).sort().join(", ")||"none"),
+      "Screen: "+screen.width+"x"+screen.height+", window "+innerWidth+"x"+innerHeight+", touch "+(navigator.maxTouchPoints||0),
+      "Browser: "+navigator.userAgent,
+      "Page: "+location.href.split("?")[0].split("#")[0]+" · "+new Date().toISOString()
+    ].join("\n");
+    a.href=FORM.replace("__DETAILS__",encodeURIComponent(d));
+  });
 })();
 
 $("#tiles").innerHTML=TILES.map(t=>
