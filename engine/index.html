@@ -112,7 +112,9 @@ select{background:var(--plate-2);border:1px solid var(--line);border-radius:4px;
 .opt{display:flex;gap:10px;align-items:flex-start;text-align:left;background:var(--plate-2);border:1px solid var(--line);
   border-radius:5px;padding:10px 12px;font:600 15px/1.35 var(--ui);min-height:48px}
 .opt kbd{font:700 12px/20px var(--ui);min-width:20px;text-align:center;border-radius:3px;background:var(--iron);color:var(--muted);flex:none}
-.opt:hover:not(:disabled){border-color:var(--brass)}
+/* Hover highlights only where there is a real pointer: on a touchscreen the last
+   tapped spot stays "hovered", and the next question's button there looked chosen. */
+@media (hover:hover){ .opt:hover:not(:disabled){border-color:var(--brass)} }
 .opt:disabled{cursor:default}
 .opt.right{border-color:var(--go);background:#1f3a31}
 .opt.wrong{border-color:var(--miss);background:#402421}
@@ -124,7 +126,7 @@ select{background:var(--plate-2);border:1px solid var(--line);border-radius:4px;
 .verdict p{margin:0;color:var(--muted);max-width:66ch}
 .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:auto}
 .btn{border:1px solid var(--line);background:var(--plate-2);border-radius:4px;padding:8px 14px;font-weight:700}
-.btn:hover:not(:disabled){border-color:var(--brass)}
+@media (hover:hover){ .btn:hover:not(:disabled){border-color:var(--brass)} }
 .btn.primary{background:var(--brass);color:#1b1608;border-color:var(--brass)}
 .btn:disabled{opacity:.45;cursor:default}
 .keys{font-size:12px;color:var(--muted)}
@@ -249,7 +251,7 @@ details.how b{color:var(--text)}
 .toolbar{display:flex;gap:6px;flex-wrap:wrap}
 .tool{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line);background:var(--plate-2);border-radius:4px;
   padding:5px 9px;font:700 13px/1.2 var(--ui)}
-.tool:hover:not(:disabled){border-color:var(--brass)}
+@media (hover:hover){ .tool:hover:not(:disabled){border-color:var(--brass)} }
 .tool:disabled{opacity:.4;cursor:default}
 .tool i{font:700 11px/17px var(--ui);font-style:normal;min-width:17px;text-align:center;border-radius:9px;background:var(--iron);color:var(--spark)}
 .tool i.full{background:var(--spark);color:#1b1608}
@@ -405,7 +407,7 @@ h3.sec{font:800 18px/1 var(--stencil);letter-spacing:.08em;text-transform:upperc
     <div id="away" class="away" hidden></div>
     <section class="console" id="console" aria-live="polite">
       <div class="crow">
-        <label for="mode">Practice</label>
+        <label for="mode">Polish</label>
         <select id="mode"></select>
       </div>
       <div class="toolbar" id="tools" aria-label="Hint and tools"></div>
@@ -1170,7 +1172,7 @@ function paintGears(){
       <div class="gname"><b>${t.name}</b>${n >= GEARMAX ? `<span class="maxbadge">Maxed</span>` : ""}<span data-k="lvl">${n ? "Level " + n : "Not built"} · ${BY[t.id].length} questions</span></div>
       <div class="gbtns">
         <button class="btn primary" type="button" data-buy="${t.id}"></button>
-        <button class="btn" type="button" data-practice="${t.id}">Practice</button>
+        <button class="btn" type="button" data-polish="${t.id}" title="Answer this topic's questions to polish this gear">Polish</button>
       </div>
       <div class="bars">
         <span data-tip="m">Mastery</span><div class="bar" data-tip="m"><i data-k="m"></i></div><em data-k="mt" data-tip="m"></em>
@@ -1543,7 +1545,7 @@ const TOUR = [
   {e:"🔧", t:"Build gears",
    p:()=>`Each gear is a topic, and it makes sparks every second, by itself. <b>Build State capitals first</b>: it costs 15 sparks. Gears keep going while you are away, and a report shows what happened when you come back.`},
   {e:"🪣", t:"Keep them shiny",
-   p:()=>`A gear you don't practise <b>rusts</b> and slows down. Answer its questions right to polish it; <b>Rustiest gears first</b> picks those questions for you. Studying on the study site stops rust altogether.`},
+   p:()=>`A gear you leave alone <b>rusts</b> and slows down. <b>Polish</b> it by answering its questions right: pick a gear to polish, or leave it on <b>Rustiest gears first</b> and the engine picks for you. Studying on the study site stops rust altogether.`},
   {e:"🧠", t:"Mastery is the real engine",
    p:()=>`Get a question right <b>four times, on your own</b>, to master it. Mastery makes a gear up to <b>5× stronger</b> and slows its rust. Hints and tools still earn sparks, but they don't count toward mastery.`},
   {e:"🌡️", t:"And a few extras",
@@ -1580,7 +1582,7 @@ $("#tools").addEventListener("click", e=>{ const b = e.target.closest("[data-too
 $("#mode").addEventListener("change", e=>{ S.mode = e.target.value; save(); nextQuestion(); });
 document.querySelector(".tabs").addEventListener("click", e=>{ const b=e.target.closest(".tab"); if(b){ UPFRESH = null; lastUpSig = ""; setTab(b.dataset.tab); paintUps(); save(); } });
 $("#pane-gears").addEventListener("click", e=>{
-  const buy = e.target.closest("[data-buy]"), pr = e.target.closest("[data-practice]");
+  const buy = e.target.closest("[data-buy]"), pr = e.target.closest("[data-polish]");
   if(buy){
     const t = TOPIC[buy.dataset.buy], p = price(t), k = toolsFor(t);
     if(maxed(t) || S.sp < p || !hasEach(k)) return;
@@ -1590,7 +1592,7 @@ $("#pane-gears").addEventListener("click", e=>{
     if(k) paintTools();
     save(); paintAll(); checkAch();
   }
-  if(pr){ S.mode = pr.dataset.practice; $("#mode").value = S.mode; save(); nextQuestion(); $("#console").scrollIntoView({block:"nearest"}); }
+  if(pr){ S.mode = pr.dataset.polish; $("#mode").value = S.mode; save(); nextQuestion(); $("#console").scrollIntoView({block:"nearest"}); }
 });
 $("#pane-shop").addEventListener("click", e=>{
   const b = e.target.closest("[data-shopbuy]"), sl = e.target.closest("[data-shopsell]");
