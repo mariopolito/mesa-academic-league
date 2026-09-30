@@ -64,9 +64,9 @@ everything at once): first rebuild at about 650 answers, then one every
 
 ## Animations
 
-Stats has an Animations setting: Device setting (the default: follows
-`prefers-reduced-motion`, which Windows sets from *Animation effects*), On, or
-Off. `applyMotion()` puts `body.still` on or off, and every animation that
+The Settings tab (with Reset) has an Animations setting: On (the default), Off,
+or Follow my device (`prefers-reduced-motion`, which Windows sets from
+*Animation effects*). A reset keeps the choice. `applyMotion()` puts `body.still` on or off, and every animation that
 should stop is written under `body.still` -- **never under a
 `prefers-reduced-motion` media query**, or the On setting cannot override it.
 

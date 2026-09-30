@@ -365,7 +365,7 @@ body.still .gauge.flash,body.still .gear.mirror svg{animation:none}
 body.still .vent{display:none}
 body.still .gauge #gNeedle{transition:none}
 /* The setting itself */
-.settings{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:10px}
+.settings{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .settings > span{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:5px;overflow:hidden}
 .seg button{background:var(--plate-2);border:0;border-right:1px solid var(--line);padding:6px 12px;font:700 13px var(--ui);color:var(--muted)}
@@ -459,6 +459,7 @@ body.still .gauge #gNeedle{transition:none}
       <button class="tab" role="tab" id="tab-shop" data-tab="shop" type="button" hidden>Shop</button>
       <button class="tab" role="tab" id="tab-rebuild" data-tab="rebuild" type="button" hidden>Rebuild</button>
       <button class="tab" role="tab" id="tab-stats" data-tab="stats" type="button">Stats</button>
+      <button class="tab" role="tab" id="tab-settings" data-tab="settings" type="button">Settings</button>
     </div>
     <div class="pane" id="pane-gears" role="tabpanel"></div>
     <div class="pane" id="pane-ups" role="tabpanel" hidden></div>
@@ -492,18 +493,18 @@ body.still .gauge #gNeedle{transition:none}
     </div>
     <div class="pane" id="pane-stats" role="tabpanel" hidden>
       <div id="statsBody"></div>
-      <!-- Outside #statsBody too, so the redraw leaves the buttons alone. -->
+    </div>
+    <div class="pane" id="pane-settings" role="tabpanel" hidden>
       <div class="settings">
         <span>Animations</span>
         <div class="seg" role="group" aria-label="Animations">
-          <button type="button" data-motion="auto">Device setting</button>
           <button type="button" data-motion="on">On</button>
           <button type="button" data-motion="off">Off</button>
+          <button type="button" data-motion="auto">Follow my device</button>
         </div>
         <small id="motionNote"></small>
       </div>
       <p class="keys">Progress is saved in this browser only.</p>
-      <!-- Outside #statsBody, which is redrawn every second: a redraw would wipe what is typed here. -->
       <div class="reset" id="resetBox">
         <button class="btn danger" type="button" id="resetBtn">Reset the engine</button>
         <div class="resetask" id="resetAsk" hidden>
@@ -761,7 +762,7 @@ const ACH_ORDER = ["first","r100","r1000","s10","s25","s50","max","gold","gold10
 /* ---------- state ---------- */
 const KEY = "mal-engine-v1";
 function fresh(){
-  return {motion:"auto", rebuilds:0, bp:0, bpEarned:0, perks:{}, runStartTot:0, runNewMastered:0, masteredEver:{}, rbSeen:false,
+  return {motion:"on", motionSet:false, rebuilds:0, bp:0, bpEarned:0, perks:{}, runStartTot:0, runNewMastered:0, masteredEver:{}, rbSeen:false,
     sp:0, tot:0, w:{}, box:{}, streak:0, psi:0, name:"", asked:false, toured:false, ups:{}, mode:"mix", tab:"gears", recent:[],
     tools:{fifty:1, eraser:2, retry:1, swap:1, double:0},   // a starter kit, so the tools explain themselves
     armed:false, dbl:0, ach:{}, upSeen:{},
@@ -781,6 +782,10 @@ try{
   }
 }catch(e){}
 S.st = Object.assign(fresh().st, S.st);
+/* Animations default to On. A save from the day "Device setting" was the
+   default carries "auto" without anyone having chosen it, so it moves to On;
+   a choice the student actually made (motionSet) is kept. */
+if(!S.motionSet && S.motion === "auto") S.motion = "on";
 S.tools = Object.assign(Object.fromEntries(TOOLS.map(t=>[t.id,0])), S.tools);
 // Every gear has a record from the start, including gears added after a save was made.
 function fillGears(){ TOPICS.forEach(t=>{ S.w[t.id] = S.w[t.id] || {n:0, f:100}; }); }
@@ -1506,7 +1511,7 @@ function paintShop(){
 function setTab(tab){
   S.tab = tab;
   document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected", b.dataset.tab===tab));
-  ["gears","ups","shop","rebuild","stats"].forEach(k=>$("#pane-"+k).hidden = k!==tab);
+  ["gears","ups","shop","rebuild","stats","settings"].forEach(k=>$("#pane-"+k).hidden = k!==tab);
   if(tab === "rebuild"){ lastRebuild = ""; lastPerks = ""; paintRebuild(); }
   if(tab === "shop"){ lastShop = ""; paintShop(); paintTrade(); }
   if(tab === "stats") paintStats();
@@ -1568,9 +1573,9 @@ function askName(){
 $("#plate").addEventListener("click", askName);
 
 /* ---------- animations ----------
-   "Device setting" follows the computer's reduce-motion option (Windows:
-   Settings > Accessibility > Visual effects > Animation effects). "On" and
-   "Off" override it for this game only. */
+   On by default. "Follow my device" follows the computer's reduce-motion option
+   (Windows: Settings > Accessibility > Visual effects > Animation effects).
+   "On" and "Off" override it, for this game only. */
 const REDUCE = window.matchMedia ? matchMedia("(prefers-reduced-motion: reduce)") : null;
 function applyMotion(){
   const dev = !!(REDUCE && REDUCE.matches), m = S.motion || "auto";
@@ -1581,7 +1586,7 @@ function applyMotion(){
 }
 document.querySelector(".seg").addEventListener("click", e=>{
   const b = e.target.closest("[data-motion]"); if(!b) return;
-  S.motion = b.dataset.motion; save(); applyMotion();
+  S.motion = b.dataset.motion; S.motionSet = true; save(); applyMotion();
 });
 if(REDUCE && REDUCE.addEventListener) REDUCE.addEventListener("change", applyMotion);
 applyMotion();
@@ -1681,7 +1686,8 @@ const resetTyped = () => $("#resetIn").value.trim().toUpperCase() === RESETWORD;
 function doReset(){
   if(!resetTyped()) return;
   resetAsk(false);
-  S = fresh(); fillGears(); save(); lastGearSig = ""; lastUpSig = ""; lastGauge = ""; UPFRESH = null; paintPlate(); paintMode(); setTab("gears"); nextQuestion(); paintAll();
+  const pref = {motion:S.motion, motionSet:S.motionSet};   // a preference, not progress: it survives a reset
+  S = Object.assign(fresh(), pref); fillGears(); save(); lastGearSig = ""; lastUpSig = ""; lastGauge = ""; UPFRESH = null; paintPlate(); paintMode(); setTab("gears"); nextQuestion(); paintAll();
   toast("Engine reset", "A fresh start", "Everything has been erased.");
 }
 $("#resetBtn").addEventListener("click", ()=>resetAsk(true));
