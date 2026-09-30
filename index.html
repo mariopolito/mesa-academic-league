@@ -610,6 +610,13 @@ kbd{
   background:var(--surface2);border-radius:4px;padding:3px 7px;flex:none;margin-top:2px;
 }
 .opt.right{border-color:var(--go);background:color-mix(in srgb,var(--go) 12%,transparent)}
+.opt.gonext,.opt.gonext:hover:not(:disabled){cursor:pointer;border-color:var(--go)}
+/* A new quiz question slides in, option by option, over QZARRIVE ms. */
+.opts.arrive .opt{animation:qarrive .3s ease-out backwards}
+.opts.arrive .opt:nth-child(2){animation-delay:.05s}
+.opts.arrive .opt:nth-child(3){animation-delay:.1s}
+.opts.arrive .opt:nth-child(4){animation-delay:.15s}
+@keyframes qarrive{from{opacity:0;transform:translateY(8px)}}
 .opt.right u{background:var(--go);color:#fff}
 .opt.wrong{border-color:var(--miss);background:color-mix(in srgb,var(--miss) 10%,transparent)}
 .opt.wrong u{background:var(--miss);color:#fff}
@@ -4129,17 +4136,27 @@ function renderQuiz(){
       <span class="timer">${QZ.i+1} / ${QZ.set.length}</span></div>
     <div class="stage-body">
       <p class="qtext">${esc(cur.q)}</p>
-      <div class="opts">${opts.map((o,i)=>`<button class="opt" data-a="${encodeURIComponent(o)}"><u>${"ABCD"[i]}</u><span>${o}</span></button>`).join("")}</div>
+      <div class="opts arrive">${opts.map((o,i)=>`<button class="opt" data-a="${encodeURIComponent(o)}"><u>${"ABCD"[i]}</u><span>${o}</span></button>`).join("")}</div>
     </div>
     <div class="stage-foot" id="qzFoot"><span class="hint">Four choices. Nothing moves until you pick one.</span></div>
   </div>`;
+  /* Tap the green answer to move on, like the Knowledge Engine. Students tap
+     it again out of habit, so a new question ignores taps for QZARRIVE ms --
+     a tap that lands just as it appears would otherwise answer it unseen --
+     and slides in over the same time. A double-tap on the answer is not a
+     Next either: that needs 300 ms after grading. */
+  const shown=performance.now();let gradedAt=0;
+  const next=()=>{QZ.i++;renderQuiz();};
   $$("#quizArea .opt").forEach(b=>b.onclick=()=>{
+    if(gradedAt){if(b.classList.contains("right")&&performance.now()-gradedAt>300)next();return;}
+    if(performance.now()-shown<QZARRIVE)return;
+    gradedAt=performance.now();
     const chosen=decodeURIComponent(b.dataset.a);
     const ok=chosen===cur.a;
     $$("#quizArea .opt").forEach(x=>{
-      x.disabled=true;
       const v=decodeURIComponent(x.dataset.a);
-      if(v===cur.a)x.classList.add("right");
+      x.disabled=v!==cur.a;
+      if(v===cur.a)x.classList.add("right","gonext");
       else if(x===b)x.classList.add("wrong");
     });
     /* Reference items are not in the question bank, so they must not count
@@ -4149,11 +4166,12 @@ function renderQuiz(){
     /* It used to advance itself after a second and a bit, which took the right
        answer off the screen before a student who got it wrong had read it. */
     $("#qzFoot").innerHTML=`<span class="rverdict ${ok?"ok":"no"}">${ok?"Correct":"Not quite"}</span>
-      <span class="hint" style="margin-left:0">${ok?"":"The right answer is marked in green."}</span>
+      <span class="hint" style="margin-left:0">${ok?"Tap it again to go on.":"The right answer is marked in green. Tap it to go on."}</span>
       <button class="btn primary" id="qzNext" style="margin-left:auto">${QZ.i+1>=QZ.set.length?"See how you did":"Next question"} &rarr;</button>`;
-    $("#qzNext").onclick=()=>{QZ.i++;renderQuiz();};
+    $("#qzNext").onclick=next;
   });
 }
+const QZARRIVE=450;
 
 /* ============================================================
    CATEGORY BOARD
