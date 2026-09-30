@@ -23,6 +23,7 @@
 !/game/build_game.py
 !/game/export_items.js
 !/game/export_server.py
+!/game/bug_form.gs
 !/game/items.json
 
 !/tools/

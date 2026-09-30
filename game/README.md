@@ -81,6 +81,15 @@ or Follow my device (`prefers-reduced-motion`, which Windows sets from
 should stop is written under `body.still` -- **never under a
 `prefers-reduced-motion` media query**, or the On setting cannot override it.
 
+## Bug reports
+
+Settings has a **Report a bug** button that opens a Google Form. `game/bug_form.gs`
+makes the form (run it once at script.new) and logs its pre-filled link, which
+goes in `BUG_FORM` in `engine_src.html`. The game replaces `__DETAILS__` in that
+link, at the moment of the click, with the question on screen, the tab, the
+screen size and the browser. It never adds the name or the save. While
+`BUG_FORM` is empty the section stays hidden.
+
 ## What the game shares with the site
 
 Both pages are on the same origin, so they share `localStorage`:

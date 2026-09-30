@@ -372,6 +372,8 @@ body.still .gauge #gNeedle{transition:none}
 .seg button:last-child{border-right:0}
 .seg button[aria-pressed="true"]{background:var(--brass);color:#1b1608}
 .settings small{color:var(--muted);font-size:12px}
+.settings.bug{border-top:1px solid var(--line);padding-top:10px;margin-top:12px}
+.settings.bug .btn{text-decoration:none;color:inherit}
 </style>
 </head><body>
 <header class="top"><div class="top-in">
@@ -503,6 +505,11 @@ body.still .gauge #gNeedle{transition:none}
           <button type="button" data-motion="auto">Follow my device</button>
         </div>
         <small id="motionNote"></small>
+      </div>
+      <div class="settings bug" id="bugBox" hidden>
+        <span>Found a problem?</span>
+        <a class="btn" id="bugLink" href="#" target="_blank" rel="noopener">Report a bug</a>
+        <small>Opens a short form in a new tab. It notes the question on screen for you.</small>
       </div>
       <p class="keys">Progress is saved in this browser only.</p>
       <div class="reset" id="resetBox">
@@ -1615,6 +1622,27 @@ document.querySelector(".seg").addEventListener("click", e=>{
 });
 if(REDUCE && REDUCE.addEventListener) REDUCE.addEventListener("change", applyMotion);
 applyMotion();
+
+/* ---------- bug reports ----------
+   A Google Form's pre-filled link, made by game/bug_form.gs. __DETAILS__ is
+   replaced, at the moment of the click, with what a report needs and a
+   student would never think to write: the question on screen, the browser and
+   the screen size. No name, no save. Empty = the section stays hidden. */
+const BUG_FORM = "";
+function bugDetails(){
+  const q = CUR && CUR.it, t = q && TOPICS.find(x=>x.id === q.t);
+  return [
+    q ? `Question: ${q.id} (${t ? t.name : q.t}${CUR.gold ? ", golden" : ""}) ${q.q.slice(0, 140)}` : "Question: none",
+    `Tab: ${S.tab} · Polish: ${S.mode} · Rebuilds: ${S.rebuilds} · Animations: ${S.motion}`,
+    `Screen: ${screen.width}x${screen.height}, window ${innerWidth}x${innerHeight}, touch ${navigator.maxTouchPoints || 0}`,
+    `Browser: ${navigator.userAgent}`,
+    `Page: ${location.href.split("?")[0]} · ${new Date().toISOString()}`,
+  ].join("\n");
+}
+if(BUG_FORM){
+  $("#bugBox").hidden = false;
+  $("#bugLink").addEventListener("click", e=>{ e.currentTarget.href = BUG_FORM.replace("__DETAILS__", encodeURIComponent(bugDetails())); });
+}
 
 /* ---------- the first-time tour ----------
    Six short cards, shown once on a first visit (after the name question, if
