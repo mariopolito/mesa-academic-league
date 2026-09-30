@@ -666,7 +666,7 @@ kbd{
 /* ---------- STATE CONNECTIONS ---------- */
 .conntitle{
   text-align:center;font-family:var(--f-ui);font-size:15px;font-weight:800;
-  letter-spacing:.01em;margin:0 0 8px;
+  letter-spacing:.01em;margin:0 0 6px;
 }
 .conngrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:0}
 .conntile{
@@ -693,7 +693,7 @@ kbd{
 .connrow.c2{background:color-mix(in srgb,var(--buzz) 10%,var(--surface));border-color:var(--buzz)}
 .connrow.c3{background:var(--surface2);border-color:var(--muted)}
 .connrow.missed{border-style:dashed;opacity:.8}
-.connbar{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;justify-content:space-between;margin-top:12px}
+.connbar{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;justify-content:space-between;margin-top:10px}
 .connmiss{font-family:var(--f-ui);font-size:12px;font-weight:700;color:var(--muted)}
 .connmiss span{
   display:inline-block;width:10px;height:10px;border-radius:50%;
@@ -701,8 +701,22 @@ kbd{
 }
 .connmiss span.used{background:var(--line-soft)}
 .connbtns{display:flex;gap:8px;flex-wrap:wrap}
-.connmsg.bad{color:var(--miss)}
-.connmsg.good{color:var(--go)}
+.connmsg{
+  text-align:center;font-family:var(--f-ui);font-size:13px;line-height:1.4;
+  color:var(--muted);margin:0 0 5px;
+}
+.connmsg.bad,.connmsg.good{
+  display:inline-block;border-radius:999px;padding:3px 14px;font-size:13.5px;
+}
+.connmsg.bad{
+  color:var(--miss);background:color-mix(in srgb,var(--miss) 12%,transparent);
+  border:1px solid var(--miss);
+}
+.connmsg.good{
+  color:var(--go);background:color-mix(in srgb,var(--go) 12%,transparent);
+  border:1px solid var(--go);
+}
+.connmsgwrap{text-align:center}
 @media (max-width:820px){.conntile{font-size:12px;min-height:60px;padding:7px 5px}}
 @media (pointer:coarse){.conntile{min-height:76px}}
 
@@ -4771,10 +4785,10 @@ function renderConn(msg,tone){
   $("#matchArea").innerHTML=`
     <p class="conntitle">Create four groups of four!</p>
     <div class="connsolved">${CN.solved.map(connRow).join("")}</div>
+    <div class="connmsgwrap"><p class="connmsg ${tone||""}" id="cnMsg">${msg}</p></div>
     ${playing?`<div class="conngrid">${CN.tiles.map(x=>
       `<button class="conntile${CN.sel.includes(x.id)?" sel":""}" data-i="${x.id}">${esc(x.t)}</button>`
       ).join("")}</div>`:""}
-    <p class="hint connmsg ${tone||""}" id="cnMsg" style="margin:10px 0 0">${msg}</p>
     <div class="connbar">
       ${playing?`<span class="connmiss">Mistakes remaining:${dots.join("")}</span>`:"<span></span>"}
       <span class="connbtns">
@@ -4845,11 +4859,11 @@ function cnSubmit(){
   $("#matchArea").querySelectorAll(".conntile.sel").forEach(b=>b.classList.add("bad"));
   setTimeout(()=>{
     CN.sel=[];
-    if(CN.miss>=CNMISS)cnOut();
+    if(CN.miss>=CNMISS)cnOut(best===3);
     else renderConn(msg,"bad");
   },360);
 }
-function cnOut(){
+function cnOut(near){
   CN.over=true;
   CN.groups.forEach((g,i)=>{
     if(CN.solved.some(x=>x.i===i))return;
@@ -4858,7 +4872,8 @@ function cnOut(){
   });
   CN.solved.sort((a,b)=>a.i-b.i);
   CN.tiles=[];CN.sel=[];
-  renderConn("<b>Out of mistakes.</b> Here are the four states \u2014 the ones you did not get are "
+  renderConn((near?"<b>One away, and out of mistakes.</b> ":"<b>Out of mistakes.</b> ")
+    +"Here are the four states \u2014 the ones you did not get are "
     +"back in your flashcards.","bad");
 }
 
