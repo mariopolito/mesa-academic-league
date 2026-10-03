@@ -3326,7 +3326,7 @@ const bMyth=()=>MYTH.flatMap(m=>[
        the questions about the symbol. */
     noIcon(bItem("Greek "+m.g+" \u2014 what is this god's symbol?",
       MYTHTERMS[m.g].s,"Mythology",2,"myth:"+m.g,m.n)),
-    bItem("Which god or goddess has the "+symShort(m.g)+" as a symbol? Give both names.",
+    bItem("Which god or goddess has "+symWith(m.g)+" as a symbol? Give both names.",
       m.g+" (Greek), "+m.r+" (Roman)","Mythology",2,"myth:"+m.g,m.n)]:[]));
 /* A memorize board, both ways round. Out loud there are no options to give
    the answer away, so the reverse -- "which root goes with 'sea or ocean'?" --
@@ -3897,15 +3897,19 @@ function qsMyth(){
     /* Both ways round, the way the gods' names already run. The symbol is
        what Mythology Connections deals, so it is worth a board of its own. */
     if(MYTHTERMS[m.g]){
-      const sym=symShort(m.g);
-      out.push(qItem("Which Greek god or goddess has the "+sym+" as a symbol?",m.g,
-        others(shuffle(MYTH.map(x=>x.g)),m.g),"Mythology",
-        "This Greek god or goddess has the "+sym+" as a symbol.",null,"myth:"+m.g));
+      const sym=symShort(m.g),kin=mythKin(m.g);
+      /* Kin first: knowing Poseidon is one of the three brothers should not be
+         enough -- you have to know which of them carries the trident. */
+      out.push(qItem("Which Greek god or goddess has "+symWith(m.g)+" as a symbol?",m.g,
+        others(shuffle(kin).concat(shuffle(MYTH.map(x=>x.g))),m.g),"Mythology",
+        "This Greek god or goddess has "+symWith(m.g)+" as a symbol.",null,"myth:"+m.g));
       /* The icon beside a named god IS that god's symbol, so a question asking
          for the symbol has to go without it. */
+      const symPool=MYTH.filter(x=>MYTHTERMS[x.g]).map(x=>symShort(x.g));
       const it=qItem("What is the symbol of Greek "+m.g+"?",sym,
-        others(likeLength(MYTH.filter(x=>MYTHTERMS[x.g]).map(x=>symShort(x.g)),sym),sym),
-        "Mythology","The symbol of Greek "+m.g+" is this.","What","myth:"+m.g);
+        others(shuffle(kin.map(symShort).filter(Boolean))
+          .concat(likeLength(symPool,sym)),sym),
+        "Mythology","This is the symbol of Greek "+m.g+".","What","myth:"+m.g);
       it.noicon=1;
       out.push(it);
     }
@@ -4862,6 +4866,14 @@ function matchClick(b){
 const CN={groups:[],tiles:[],sel:[],miss:0,solved:[],bad:new Set(),tried:new Set(),
   hints:[],hintsLeft:0,over:false};
 const CNPAIRS=4;   /* four Pair hints a board, one per group if they are spread */
+/* Gods a student mixes up, so a wrong answer is one they could plausibly have
+   given: the three brothers, the twins, the war-and-forge three, the household
+   three, and the three that are neither. A symbol board drawn from kin asks
+   whether you know which brother carries which object. */
+const MYTHKIN=[["Zeus","Poseidon","Hades"],["Apollo","Artemis"],
+  ["Ares","Athena","Hephaestus"],["Hera","Hestia","Demeter"],
+  ["Aphrodite","Dionysus","Hermes"]];
+const mythKin=g=>(MYTHKIN.find(k=>k.indexOf(g)>=0)||[]).filter(x=>x!==g);
 const CNMISS=4;
 /* A group is four tiles that belong together, whatever the board is about:
    a label, the four items with what each one is, and the card ids a solved
@@ -4949,6 +4961,13 @@ function cnMythBoard(){
     return {label:god.g,items:items,ids:["myth:"+god.g]};
   });
 }
+/* "Cerberus" is a name; the rest are objects. The Category board reads the
+   answers back as responses, so the article has to be right there too. */
+const symIsName=g=>/^[A-Z]/.test((MYTHTERMS[g]||{s:""}).s);
+Object.keys(MYTHTERMS).forEach(g=>{
+  if(!symIsName(g))THE_OK.add(MYTHTERMS[g].s.split(",")[0]);
+});
+
 function startConn(kind){
   CN.kind=kind||CN.kind||"states";
   CN.groups=CN.kind==="myth"?cnMythBoard():cnBoard();
@@ -5631,6 +5650,7 @@ const langMark=st=>{
 const GODICON={};
 Object.keys(MYTHTERMS).forEach(g=>{GODICON[g]=MYTHTERMS[g].i;});
 const symShort=g=>MYTHTERMS[g]?MYTHTERMS[g].s.split(",")[0]:"";
+const symWith=g=>MYTHTERMS[g]?(symIsName(g)?symShort(g):"the "+symShort(g)):"";
 const godSymbol=g=>MYTHTERMS[g]
   ?'<span class="godicon" aria-hidden="true">'+MYTHTERMS[g].i+'</span>'+MYTHTERMS[g].s:"";
 const godIcon=g=>GODICON[g]?'<span class="godicon" aria-hidden="true">'+GODICON[g]+'</span>':"";
