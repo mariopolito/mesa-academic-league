@@ -945,7 +945,8 @@ function nextQuestion(swapSlot){   // swapSlot: deal a new question in this topi
   if(CUR && CUR.timer) clearTimeout(CUR.timer);
   stash();
   const slot = swapSlot || pickTopic(), p = !swapSlot && S.pend[slot], back = p && ITEM[p.id];
-  if(back && p.opts.length === back.o.length + 1){
+  // a re-export can change a question under its id: restore only if the saved options are still its options
+  if(back && p.opts.length === back.o.length + 1 && [back.a, ...back.o].every(o=>p.opts.includes(o))){
     CUR = {it:back, slot, gold:!!p.gold, opts:p.opts, gone:new Set(p.gone), done:false, hint:!!p.hint, helped:!!p.helped,
       rescued:!!p.rescued, needTap:false, t0:performance.now() - (p.el || 0), gradedAt:0, timer:0};
     renderQuestion();

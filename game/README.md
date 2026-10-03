@@ -27,7 +27,7 @@ refresh the game; until this is re-run, the game asks the old questions.
 2. `python game/export_server.py` (serves the folder on http://127.0.0.1:8765)
 3. Open http://127.0.0.1:8765/Mesa-Academic-League.html, make sure all four
    quarters are selected, and run `game/export_items.js` in the console.
-   It writes `game/items.json` (749 questions as of September 2026), with the
+   It writes `game/items.json` (777 questions as of October 2026), with the
    flashcard hints matched by card id and answer.
 4. `python game/build_game.py`
 
@@ -37,8 +37,14 @@ The tip-offs (`tip`) are not a gear: they are the golden questions, one in
 A new quiz set on the site stops the export until it is given a gear in
 `REF` (export_items.js) and `TOPICS` (engine_src.html).
 
-Question ids are the site's (`q70`, `caps/cap:Ohio`, `myth/myth:Zeus~2`), so
-progress survives a re-export as long as the site keeps its order.
+Question ids are the site's (`q70`, `caps/cap:Ohio`, `myth/myth:Zeus~2`), and
+**an exported question keeps its id for good**: the export reads the previous
+`items.json` and reuses the id of any question with the same text and answer.
+The site numbers several directions of one fact by position, so the October
+2026 symbol questions, inserted mid-set, would otherwise have moved 14 gods'
+mastery onto different questions. New questions take the next unused number;
+a reworded question counts as new. Run the export over the committed
+`items.json`, never a deleted one.
 
 ## Rebuild the Engine (prestige)
 
