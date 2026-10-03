@@ -3523,9 +3523,14 @@ const cardsNick= ()=>flagCards(STATES.map(x=>["Nickname(s) for "+x[0]+"?",x[1],"
    direction of a fact the judge can ask from either end, which is why the
    capitals had a reversed deck from the start -- these two now have one too,
    inside the same deck rather than beside it. */
+/* A reversed card's answer is the state, so its hint is another fact about it
+   -- the capital, unless the capital spells the state out (Indianapolis,
+   Oklahoma City), when it falls back to `alt`. */
+const capNames=st=>stCap(st).toLowerCase().includes(st.toLowerCase());
+const stHint=(st,alt)=>capNames(st)?alt:"Its capital is "+stCap(st)+".";
 const cardsNick2=()=>flagCards(STATES.map(x=>[
   "Which state has "+(x[1].includes("/")?"these nicknames":"this nickname")+": "+x[1]+"?",
-  x[0],"US Geography","Its capital is "+stCap(x[0])+".","nick2:"+x[0]]));
+  x[0],"US Geography",stHint(x[0],"That state\u2019s motto is: "+x[2]),"nick2:"+x[0]]));
 const cardsMotto=()=>flagCards(STATES.map(x=>{
   const nfo=STATEINFO[x[0]]||{m:""};
   const lang=(nfo.m.split(/[:.]/)[0]||"").trim();
@@ -3533,7 +3538,7 @@ const cardsMotto=()=>flagCards(STATES.map(x=>{
   return ["Motto of "+x[0]+"?",x[2],"US Geography",
     (lang?lang+" \u00b7 ":"")+words+" word"+(words>1?"s":""),"motto:"+x[0]];}));
 const cardsMotto2=()=>flagCards(STATES.map(x=>["Which state\u2019s motto is \u201c"+x[2]+"\u201d?",x[0],"US Geography",
-  "Its capital is "+stCap(x[0])+".","motto2:"+x[0]]));
+  stHint(x[0],"It is the "+x[1].split("/")[0].trim().replace(/^The\s+/i,"")+"."),"motto2:"+x[0]]));
 const cardsSpell=()=>SPELL.filter(x=>inQ(x)&&lvOK(C,x)).map(x=>[
   '<span class="cluelabel">Definition</span>'+x.d+'<div class="cluesent">'+blankOut(x.s,x.w)+'</div>'+sayBtns(x.w)+'<div class="cluecount">'+x.w.length+' letters</div>',
   '<div class="spellout big">'+x.w.split("").join("-").toUpperCase()+'</div><div class="theword">'+x.w+'</div>'+(x.h?'<div class="trap">'+x.h+'</div>':''),
@@ -3954,7 +3959,7 @@ function qsNick(){
       "This nickname belongs to "+x[0]+".","What","nick:"+x[0]));
     if(tally[nk]===1)out.push(qItem("Which state is the "+nk+"?",x[0],
       others(shuffle(STATES.map(y=>y[0])),x[0]),"State nicknames",
-      "This state is the "+nk.replace(/^The\s+/i,"")+".",null,"nick:"+x[0]));
+      "This state is the "+nk.replace(/^The\s+/i,"")+".",null,"nick2:"+x[0]));   // the reversed card, like cap2:
   });
   return out;
 }
@@ -3972,7 +3977,7 @@ function qsMotto(){
   STATES.forEach(x=>{
     out.push(qItem("Which state’s motto is “"+plain(x[2])+"”?",x[0],
       others(shuffle(STATES.map(y=>y[0])),x[0]),"State mottos",
-      "This state’s motto is “"+plain(x[2])+".”",null,"motto:"+x[0]));
+      "This state’s motto is “"+plain(x[2])+".”",null,"motto2:"+x[0]));
     /* A 41-character Latin motto against three short English ones can be
        picked out without knowing anything, so the distractors lean to the same
        language and a similar length before falling back to the whole list. */

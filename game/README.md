@@ -48,9 +48,9 @@ a reworded question counts as new. Run the export over the committed
 
 **A re-export is not repeatable.** The site draws wrong answers and the state
 cards' hints at random on each page load, so a fresh export changes the options
-on ~450 questions and the hints on ~60 state questions. Some of those hints
-just repeat the question ("Its capital is Montgomery." for "Montgomery is the
-capital of which state?"). To add only what changed on the site, diff the new
+on ~450 questions. (The state hints used to change too: the export matched a
+card by its state alone, so any of a state's three reversed cards could lend
+its hint. It now matches the whole card id; fixed October 2026.) To add only what changed on the site, diff the new
 export against the committed file and carry over just those items, as was done
 for the symbol hints in October 2026.
 
