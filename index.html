@@ -5822,7 +5822,9 @@ function stateRow(i,opts){
     :x[1];
   /* Whatever the table is sorted by carries the bold: in A-Z by capital the
      eye is running down the capitals, and a bold state name beside them is
-     the wrong thing shouting. */
+     the wrong thing shouting. The motto sort passes "none" -- the motto column
+     is already italic, and bold italic is a heavy, muddy thing to read fifty
+     times down a page. */
   const bold=opts.bold||"state";
   const em=(what,html)=>bold===what?"<b>"+html+"</b>":html;
   return `<tr class="rowq" data-i="${key}"><td class="st${bold==="state"?"":" nb"}">${flagImg(x[0])}${em("state",x[0])}</td><td>${em("cap",cap)}</td><td>${opts.nick?nick:em("nick",x[1])}</td><td class="mot">${langMark(x[0])}${em("motto",x[2])}</td><td class="chev">+</td></tr>
@@ -5954,7 +5956,7 @@ function renderStates(mode){
     Object.keys(by).sort((a,b)=>by[b].length-by[a].length||a.localeCompare(b)).forEach(L=>{
       html+=grpRow(LANGICON[L]||"\ud83d\udde3\ufe0f",
         L+" \u00b7 "+by[L].length+" motto"+(by[L].length>1?"s":""));
-      by[L].sort((a,b)=>STATES[a][0].localeCompare(STATES[b][0])).forEach(i=>{html+=stateRow(i,{bold:"motto"});});
+      by[L].sort((a,b)=>STATES[a][0].localeCompare(STATES[b][0])).forEach(i=>{html+=stateRow(i,{bold:"none"});});
     });
   }else if(mode==="city"){
     idx.sort((a,b)=>capOf(a).localeCompare(capOf(b)));
