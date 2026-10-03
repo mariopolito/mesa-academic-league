@@ -3900,9 +3900,11 @@ function qsMyth(){
       const sym=symShort(m.g),kin=mythKin(m.g);
       /* Kin first: knowing Poseidon is one of the three brothers should not be
          enough -- you have to know which of them carries the trident. */
-      out.push(qItem("Which Greek god or goddess has "+symWith(m.g)+" as a symbol?",m.g,
+      const hg=qItem("Which Greek god or goddess has "+symWith(m.g)+" as a symbol?",m.g,
         others(shuffle(kin).concat(shuffle(MYTH.map(x=>x.g))),m.g),"Mythology",
-        "This Greek god or goddess has "+symWith(m.g)+" as a symbol.",null,"myth:"+m.g));
+        "This Greek god or goddess has "+symWith(m.g)+" as a symbol.",null,"myth:"+m.g);
+      if(MYTHHINT[m.g])hg.h=MYTHHINT[m.g][0];
+      out.push(hg);
       /* The icon beside a named god IS that god's symbol, so a question asking
          for the symbol has to go without it. */
       const symPool=MYTH.filter(x=>MYTHTERMS[x.g]).map(x=>symShort(x.g));
@@ -3911,6 +3913,7 @@ function qsMyth(){
           .concat(likeLength(symPool,sym)),sym),
         "Mythology","This is the symbol of Greek "+m.g+".","What","myth:"+m.g);
       it.noicon=1;
+      if(MYTHHINT[m.g])it.h=MYTHHINT[m.g][1];
       out.push(it);
     }
     out.push(qItem("What is Greek "+m.g+" the god or goddess of?",m.d,
@@ -4899,6 +4902,27 @@ const MYTHTERMS={
   Hephaestus:{d:["fire","the forge","metalworking"],s:"hammer",i:"\ud83d\udd28"},
   Dionysus:{d:["wine","ritual madness"],s:"grapevine",i:"\ud83c\udf47"},
   Hestia:{d:["the hearth","home","family"],s:"hearth fire",i:"\ud83d\udd25"}
+};
+
+/* Hints for the two symbol questions, [which god has it, what is it]. The
+   first never names a god, the second never names the object, so neither
+   gives its own answer away. Nothing on this site shows them yet; the
+   Knowledge Engine reads them through the quiz items' `h` (game/export_items.js). */
+const MYTHHINT={
+  Zeus:["The king of the gods, who rules the sky.","He hurls it down from the sky in a storm."],
+  Hera:["The queen of the gods, goddess of marriage.","A bird whose tail feathers are covered in \u201ceyes.\u201d"],
+  Poseidon:["He rules the sea and shakes the earth.","A three-pronged spear for the sea."],
+  Hades:["He rules the underworld.","A three-headed dog that guards the gates of the dead."],
+  Athena:["The goddess of wisdom, born from her father\u2019s head.","A bird that sees in the dark and stands for wisdom."],
+  Aphrodite:["The goddess of love and beauty.","A white bird that stands for peace and love."],
+  Ares:["The god of war.","What a soldier carries: one thing to attack with, one to defend with."],
+  Apollo:["The god of the sun, music and healing.","A small harp he plays."],
+  Artemis:["The goddess of the hunt and the moon.","A hunter shoots arrows with it."],
+  Hermes:["The messenger of the gods, the fastest of them all.","What a speedy messenger wears on his feet, with feathers on them."],
+  Demeter:["The goddess of the harvest and grain.","A tied bundle of the grain bread is made from."],
+  Hephaestus:["The blacksmith god of fire and the forge.","A blacksmith\u2019s tool for pounding metal into shape."],
+  Dionysus:["The god of wine.","The climbing plant that wine grapes grow on."],
+  Hestia:["The goddess of the home, who tends the family fireplace.","The flame at the center of every Greek home."]
 };
 
 /* A tile that names its own state hands the group over (Indianapolis,

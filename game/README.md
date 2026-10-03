@@ -46,6 +46,14 @@ mastery onto different questions. New questions take the next unused number;
 a reworded question counts as new. Run the export over the committed
 `items.json`, never a deleted one.
 
+**A re-export is not repeatable.** The site draws wrong answers and the state
+cards' hints at random on each page load, so a fresh export changes the options
+on ~450 questions and the hints on ~60 state questions. Some of those hints
+just repeat the question ("Its capital is Montgomery." for "Montgomery is the
+capital of which state?"). To add only what changed on the site, diff the new
+export against the committed file and carry over just those items, as was done
+for the symbol hints in October 2026.
+
 ## Rebuild the Engine (prestige)
 
 Unlocks when all 10 gears are built and the run has earned `REBUILD_GOAL(k)`
