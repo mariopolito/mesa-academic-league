@@ -687,6 +687,8 @@ kbd{
 /* The language a motto is in. Windows draws country flags as two letters, so
    the mark is a thing, not a flag, and the full name is on the title. */
 .langmark{margin-right:8px;font-size:13px;line-height:1;cursor:help}
+.nickicon{margin-right:8px;font-size:14px;line-height:1}
+.nickcount{color:var(--muted);font-size:12px;font-weight:700}
 #stSort .chip{white-space:nowrap}
 /* One picture per event, on the home tile and in front of the panel title. */
 .evicon{margin-right:9px;font-size:1.05em;line-height:1}
@@ -698,10 +700,10 @@ kbd{
   text-align:center;font-family:var(--f-ui);font-size:15px;font-weight:800;
   letter-spacing:.01em;margin:0 0 6px;
 }
-.conngrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:0}
+.conngrid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:0}
 .conntile{
   background:var(--surface);border:1px solid var(--line);border-radius:8px;
-  min-height:50px;padding:8px 7px;display:flex;align-items:center;justify-content:center;
+  min-height:48px;padding:7px 7px;display:flex;align-items:center;justify-content:center;
   text-align:center;font-family:var(--f-read);font-size:14px;line-height:1.3;overflow-wrap:anywhere;
 }
 .conntile:hover:not(:disabled){border-color:var(--text)}
@@ -3302,7 +3304,7 @@ const bNick=()=>STATES.map(x=>bItem("What is the nickname of "+x[0]+"?",x[1],
 const bMotto=()=>STATES.map(x=>bItem("What is the motto of "+x[0]+"?",x[2],
   "State mottos",3,"motto:"+x[0]));
 const bMyth=()=>MYTH.flatMap(m=>[
-  bItem("Greek "+m.g+" \u2014 who is the Roman equivalent, and what do they rule over?",
+  bItem(godIcon(m.g)+"Greek "+m.g+" \u2014 who is the Roman equivalent, and what do they rule over?",
     m.r+" \u2014 "+m.d.toLowerCase(),"Mythology",1,"myth:"+m.g,m.n),
   bItem("Which god or goddess rules over "+m.d.toLowerCase()+"? Give both names.",
     m.g+" (Greek), "+m.r+" (Roman)","Mythology",2,"myth:"+m.g,m.n)]);
@@ -3531,7 +3533,7 @@ const cardsTense=()=>TENSES.map((t,i)=>[t[3]+"<br><br><i>"+t[2]+"</i>",t[0]+" \u
 /* "Cereal is named after Ceres" is the memory hook and, on a card asking for
    Demeter's Roman name, also the answer. It belongs on the back either way. */
 const cardsMyth =()=>MYTH.map(m=>[
-  "Greek <b>"+m.g+"</b> \u2014 what is the Roman name, and what does this god rule over?",
+  godIcon(m.g)+"Greek <b>"+m.g+"</b> \u2014 what is the Roman name, and what does this god rule over?",
   m.r+"<div class=\"theword\">"+m.d+"</div><div class=\"trap\">"+m.n+"</div>",
   "Mythology",
   m.h||(squash(m.n).includes(squash(m.r))?"":m.n),
@@ -4178,7 +4180,7 @@ function renderQuiz(){
     <div class="stage-top"><span class="tag">${cur.c}</span><span class="tag lv">${cur.ref?"Reference":"Level "+cur.l}</span>
       <span class="timer">${QZ.i+1} / ${QZ.set.length}</span></div>
     <div class="stage-body">
-      <p class="qtext">${(st=>st&&cur.q.indexOf(st)>=0?flagImg(st):"")(idState(cur.cid))}${esc(cur.q)}</p>
+      <p class="qtext">${(st=>st&&cur.q.indexOf(st)>=0?flagImg(st):"")(idState(cur.cid))}${itemGod(cur)}${esc(cur.q)}</p>
       <div class="opts arrive">${opts.map((o,i)=>`<button class="opt" data-a="${encodeURIComponent(o)}"><u>${"ABCD"[i]}</u><span>${flagImg(o)}${o}</span></button>`).join("")}</div>
     </div>
     <div class="stage-foot" id="qzFoot"><span class="hint">Four choices. Nothing moves until you pick one.</span></div>
@@ -4698,8 +4700,9 @@ function matchCtl(){
       <div class="ctl"><i>Questions</i><div class="chips" data-f="set">
         ${SUBJSETS.map(([k,n])=>`<button class="chip" data-v="${k}" aria-pressed="${k===M.set}">${n}</button>`).join("")}
       </div></div>
-      <div class="ctl"><i>Game</i><div class="chips" data-f="set">
+      <div class="ctl"><i>Games</i><div class="chips" data-f="set">
         <button class="chip" data-v="conn" aria-pressed="${M.set==="conn"}">State Connections</button>
+        <button class="chip" data-v="connmyth" aria-pressed="${M.set==="connmyth"}">Mythology Connections</button>
       </div></div>
     </div>
     <div class="ctl"><i>Memorize boards</i><div class="chips" data-f="set">
@@ -4713,7 +4716,7 @@ $("#matchCtl").addEventListener("click",e=>{
 matchCtl();
 function startMatch(){
   $("#matchArea").dataset.init="1";
-  if(M.set==="conn"){startConn();return;}
+  if(M.set==="conn"||M.set==="connmyth"){startConn(M.set==="connmyth"?"myth":"states");return;}
   if(M.set.indexOf("q:")===0){
     const pool=ivPool(BOARDIV,M.set.slice(2));
     if(!pool.length){
@@ -4823,8 +4826,31 @@ const CN={groups:[],tiles:[],sel:[],miss:0,solved:[],bad:new Set(),tried:new Set
   hints:[],hintsLeft:0,over:false};
 const CNPAIRS=4;   /* four Pair hints a board, one per group if they are spread */
 const CNMISS=4;
+/* A group is four tiles that belong together, whatever the board is about:
+   a label, the four items with what each one is, and the card ids a solved
+   group marks. `terms` is everything the group could ever put on a tile --
+   two groups sharing any of them never share a board. */
 const CNKINDS=["state","cap","nick","motto"];
 const CNLABEL={state:"State",cap:"Capital",nick:"Nickname",motto:"Motto"};
+/* What each god is known by. The domains are the packet's own "rules over"
+   column, split; the symbol is the object the god is always drawn with, and
+   it is what gives Ares a fourth tile -- Ares, Mars, war is only three. */
+const MYTHTERMS={
+  Zeus:{d:["the sky","thunder","king of the gods"],s:"thunderbolt"},
+  Hera:{d:["marriage","family"],s:"peacock"},
+  Poseidon:{d:["the sea","earthquakes","horses"],s:"trident"},
+  Hades:{d:["the underworld","wealth"],s:"Cerberus"},
+  Athena:{d:["wisdom","strategy","crafts"],s:"owl"},
+  Aphrodite:{d:["love","beauty","desire"],s:"dove"},
+  Ares:{d:["war"],s:"spear"},
+  Apollo:{d:["the sun","healing","prophecy"],s:"lyre"},
+  Artemis:{d:["the hunt","the moon","the wilderness"],s:"bow"},
+  Hermes:{d:["messages","commerce"],s:"winged sandals"},
+  Demeter:{d:["agriculture","grain","fertility"],s:"sheaf of wheat"},
+  Hephaestus:{d:["fire","the forge","metalworking"],s:"hammer"},
+  Dionysus:{d:["wine","ritual madness"],s:"grapevine"},
+  Hestia:{d:["the hearth","home","family"],s:"hearth fire"}
+};
 
 /* A tile that names its own state hands the group over (Indianapolis,
    Oklahoma City), and "Sunshine State" is listed for two states, so a board
@@ -4857,20 +4883,53 @@ function cnBoard(){
         t===u||t.includes(g.state.toLowerCase())||u.includes(o.state.toLowerCase()))));
     if(!clash)out.push(g);
   }
-  return out;
+  return out.map(g=>({label:g.state,
+    items:[{k:"State",t:g.state},{k:"Capital",t:g.cap},{k:"Nickname",t:g.nick},{k:"Motto",t:g.motto}],
+    ids:["cap:"+g.state,"nick:"+g.state,"motto:"+g.state]}));
 }
-function startConn(){
-  CN.groups=cnBoard();CN.sel=[];CN.miss=0;CN.solved=[];CN.bad=new Set();
+/* The gods, four tiles each: both names, one thing they rule over, and the
+   symbol. Apollo kept his name in both traditions, so he spends that tile on
+   a second domain instead -- Apollo, the sun, prophecy, lyre. */
+function cnMythBoard(){
+  const pool=MYTH.filter(m=>MYTHTERMS[m.g]).map(m=>{
+    const t=MYTHTERMS[m.g];
+    return {g:m.g,r:m.r,d:t.d,s:t.s,
+      terms:[m.g,m.r,t.s].concat(t.d).map(x=>x.toLowerCase())};
+  });
+  const out=[];
+  for(const god of shuffle(pool)){
+    if(out.length===4)break;
+    if(out.some(o=>o.terms.some(t=>god.terms.includes(t))))continue;
+    out.push(god);
+  }
+  return out.map(god=>{
+    const ds=shuffle(god.d);
+    const items=god.g===god.r
+      ? [{k:"Greek and Roman",t:god.g},{k:"Rules over",t:ds[0]},
+         {k:"Rules over",t:ds[1]},{k:"Symbol",t:god.s}]
+      : [{k:"Greek",t:god.g},{k:"Roman",t:god.r},
+         {k:"Rules over",t:ds[0]},{k:"Symbol",t:god.s}];
+    return {label:god.g,items:items,ids:["myth:"+god.g]};
+  });
+}
+function startConn(kind){
+  CN.kind=kind||CN.kind||"states";
+  CN.groups=CN.kind==="myth"?cnMythBoard():cnBoard();
+  CN.sel=[];CN.miss=0;CN.solved=[];CN.bad=new Set();
   CN.tried=new Set();CN.hints=[];CN.hintsLeft=CNPAIRS;CN.over=false;
   CN.tiles=shuffle([].concat(...CN.groups.map((g,i)=>
-    CNKINDS.map(k=>({id:i+":"+k,g:i,t:g[k]})))));
-  renderConn("Every group is one state: the state itself, its capital, its nickname "
-    +"and its motto.");
+    g.items.map((it,n)=>({id:i+":"+n,g:i,t:it.t})))));
+  renderConn(CN.kind==="myth"
+    ? "Every group is one god: the Greek name, the Roman name, something they rule over, and their symbol."
+    : "Every group is one state: the state itself, its capital, its nickname and its motto.");
 }
+/* The label is printed once, so the item that repeats it -- the state's own
+   name tile -- is not printed again beside it. */
 function connRow(x){
   const g=CN.groups[x.i];
-  return `<div class="connrow c${x.i} ${x.how}"><b>${flagImg(g.state)}${esc(g.state)}</b>`
-    +CNKINDS.slice(1).map(k=>`<i>${CNLABEL[k]}</i> ${esc(g[k])}`).join(" &middot; ")+`</div>`;
+  return `<div class="connrow c${x.i} ${x.how}"><b>${flagImg(g.label)}${esc(g.label)}</b>`
+    +g.items.filter(it=>it.t!==g.label)
+      .map(it=>`<i>${it.k}</i> ${esc(it.t)}`).join(" &middot; ")+`</div>`;
 }
 function renderConn(msg,tone){
   const dots=[];
@@ -4879,14 +4938,14 @@ function renderConn(msg,tone){
   $("#matchArea").innerHTML=`
     <p class="conntitle">Create four groups of four!</p>
     <div class="connsolved">${CN.solved.map(connRow).join("")}</div>
-    <div class="connmsgwrap"><p class="connmsg ${tone||""}" id="cnMsg">${msg}</p></div>
+    ${msg?`<div class="connmsgwrap"><p class="connmsg ${tone||""}" id="cnMsg">${msg}</p></div>`:'<p class="connmsg" id="cnMsg" hidden></p>'}
     ${playing?`<div class="conngrid">${CN.tiles.map(x=>
       `<button class="conntile${CN.sel.includes(x.id)?" sel":""}${cnHintClass(x.id)}" data-i="${x.id}">${flagImg(x.t)}${esc(x.t)}</button>`
       ).join("")}</div>`:""}
     <div class="connbar">
       ${playing?`<span class="connmiss">Mistakes remaining:${dots.join("")}</span>`:"<span></span>"}
       <span class="connbtns">
-        ${playing?`<button class="btn ghost small" id="cnPair"${CN.hintsLeft?"":" disabled"} title="Hint: outlines two tiles that belong to the same state">\ud83d\udca1 Hint: a pair${CN.hintsLeft?" \u00b7 "+CN.hintsLeft:""}</button>
+        ${playing?`<button class="btn ghost small" id="cnPair"${CN.hintsLeft?"":" disabled"} title="Hint: outlines two tiles from the same group">\ud83d\udca1 Hint: a pair${CN.hintsLeft?" \u00b7 "+CN.hintsLeft:""}</button>
         <button class="btn ghost small" id="cnShuf">Shuffle</button>
         <button class="btn ghost small" id="cnClear">Deselect all</button>
         <button class="btn small" id="cnGo"${CN.sel.length===4?"":" disabled"}>Submit</button>`:""}
@@ -4925,7 +4984,8 @@ function cnPair(){
   if(two.length<2)return;
   CN.hints.push({g:g,ids:two});
   CN.hintsLeft--;
-  renderConn("<b>Hint \u2014 these two go together.</b> They are two of one state\u2019s four."
+  renderConn("<b>Hint \u2014 these two go together.</b> They are two of one "
+    +(CN.kind==="myth"?"god":"state")+"\u2019s four."
     +(CN.hintsLeft?" "+CN.hintsLeft+" more hint"+(CN.hintsLeft>1?"s":"")+" left.":" That was the last hint."),null);
 }
 function cnTap(id){
@@ -4940,8 +5000,7 @@ function cnTap(id){
    the three the reference decks drill, so a group solved first time marks all
    three and a group that took a wrong guess hands them back. */
 function cnMark(i,ok){
-  const g=CN.groups[i];
-  markSeen("cap:"+g.state,ok);markSeen("nick:"+g.state,ok);markSeen("motto:"+g.state,ok);
+  CN.groups[i].ids.forEach(id=>markSeen(id,ok));
 }
 function cnSubmit(){
   if(CN.sel.length!==4||CN.over)return;
@@ -4968,15 +5027,16 @@ function cnSubmit(){
         +" +20 bonus.","good");
       return;
     }
-    renderConn("<b>That is a state.</b> "+CN.tiles.length/4+" to go.","good");
+    renderConn("",null);
     return;
   }
   CN.miss++;
   CN.tried.add(key);
   gs.forEach(g=>CN.bad.add(g));
   scoreWrong();
-  const msg=best===3?"<b>One away.</b> Three of those four share a state."
-    :"<b>Not a set.</b> Those tiles come from "+Object.keys(count).length+" different states.";
+  const what=CN.kind==="myth"?"god":"state";
+  const msg=best===3?"<b>One away.</b> Three of those four share a "+what+"."
+    :"<b>Not a set.</b> Those tiles come from "+Object.keys(count).length+" different "+what+"s.";
   $("#matchArea").querySelectorAll(".conntile.sel").forEach(b=>b.classList.add("bad"));
   setTimeout(()=>{
     if(CN.miss>=CNMISS){CN.sel=[];cnOut(best===3);}
@@ -4993,7 +5053,7 @@ function cnOut(near){
   CN.solved.sort((a,b)=>a.i-b.i);
   CN.tiles=[];CN.sel=[];
   renderConn((near?"<b>One away, and out of mistakes.</b> ":"<b>Out of mistakes.</b> ")
-    +"Here are the four states \u2014 the ones you did not get are "
+    +"Here are the four "+(CN.kind==="myth"?"gods":"states")+" \u2014 the ones you did not get are "
     +"back in your flashcards.","bad");
 }
 
@@ -5030,8 +5090,8 @@ const TYSETS={
     pool:dir=>(dir==="dg"||dir==="dr")?MYTH:MYTH.filter(m=>m.g!==m.r),
     item:(m,dir)=>{
       const domain=m.d.replace(/^(God|Goddess) of /i,"").replace(/^King of the gods; god of /i,"");
-      const q=dir==="gr"?"The Greeks called this god <b>"+m.g+"</b>. What did the Romans call the same god?"
-        :dir==="rg"?"The Romans called this god <b>"+m.r+"</b>. What did the Greeks call the same god?"
+      const q=dir==="gr"?godIcon(m.g)+"The Greeks called this god <b>"+m.g+"</b>. What did the Romans call the same god?"
+        :dir==="rg"?godIcon(m.g)+"The Romans called this god <b>"+m.r+"</b>. What did the Greeks call the same god?"
         :dir==="dr"?"Which <em>Roman</em> god is the god or goddess of <b>"+domain+"</b>?"
         :"Which <em>Greek</em> god is the god or goddess of <b>"+domain+"</b>?";
       const a=(dir==="gr"||dir==="dr")?m.r:m.g;
@@ -5719,6 +5779,16 @@ const flagImg=st=>FLAGS[st]?'<img class="flagicon" src="'+FLAGS[st]+'" alt="">':
 /* The id a card, tile or quiz item already carries says which state it is
    about: cap:Ohio, cap2:Ohio, nick2:Ohio, motto:Ohio. */
 const idState=id=>{const m=/^(?:cap2?|nick2?|motto2?):(.+)$/.exec(String(id||""));return m&&FLAGS[m[1]]?m[1]:"";};
+/* The same rule for the gods: a picture beside a god the question has already
+   named, and never beside the options, where four different pictures would
+   pair the board for the student. */
+function itemGod(it){
+  const m=/^myth:(.+)$/.exec(String((it&&it.cid)||""));
+  if(!m)return "";
+  const g=m[1],r=(MYTH.find(x=>x.g===g)||{}).r||"";
+  const q=String((it&&it.q)||"");
+  return (q.indexOf(g)>=0||(r&&q.indexOf(r)>=0))?godIcon(g):"";
+}
 /* A deck's cards, with the flag put on whichever face names the state. */
 function flagCards(list){
   return list.map(c=>{
@@ -5737,7 +5807,12 @@ function stateRow(i,opts){
   opts=opts||{};
   const x=STATES[i], cap=(CAPS.find(c=>c[0]===x[0])||["",""])[1], nfo=STATEINFO[x[0]]||{n:"",m:""};
   const key=opts.key===undefined?i:opts.key;
-  const nick=opts.nick?`<b>${opts.nick}</b>`:x[1];
+  /* The (2) says this state has two nicknames and you are looking at one of
+     them -- the others are a row away under their own letter. */
+  const nickN=stateNicks(i).length;
+  const nick=opts.nick
+    ?`${nickIcon(opts.nick)}<b>${opts.nick}</b>${nickN>1?` <span class="nickcount">(${nickN})</span>`:""}`
+    :x[1];
   return `<tr class="rowq" data-i="${key}"><td class="st">${flagImg(x[0])}${x[0]}</td><td>${cap}</td><td>${nick}</td><td class="mot">${langMark(x[0])}${x[2]}</td><td class="chev">+</td></tr>
     <tr class="det" data-d="${key}" hidden><td colspan="5"><div class="detin">
       <div class="detcol"><span class="cluelabel">What the motto means</span><p>${nfo.m}</p></div>
@@ -5745,6 +5820,87 @@ function stateRow(i,opts){
     </div></td></tr>`;
 }
 const stateNicks=i=>STATES[i][1].split("/").map(n=>n.trim()).filter(Boolean);
+/* A picture per nickname, shown only in the nickname sort: there the nickname
+   is what is being looked up. In the other sorts a row carries two or three of
+   them and the pictures would crowd out the state. */
+const NICKICON={
+  "Aloha State":"\ud83c\udf3a",
+  "America's Dairyland":"\ud83e\uddc0",
+  "Badger State":"\ud83e\udda1",
+  "Battle Born State":"\u2694\ufe0f",
+  "Bay State":"\u26f5",
+  "Beaver State":"\ud83e\uddab",
+  "Beef State":"\ud83d\udc04",
+  "Beehive State":"\ud83d\udc1d",
+  "Big Sky Country":"\ud83c\udf0c",
+  "Bluegrass State":"\ud83c\udfbb",
+  "Buckeye State":"\ud83c\udf30",
+  "Centennial State":"\ud83d\udcaf",
+  "Chinook State":"\ud83d\udc1f",
+  "Constitution State":"\ud83d\udcdc",
+  "Corn State":"\ud83c\udf3d",
+  "Cornhusker State":"\ud83d\ude9c",
+  "Cotton State":"\ud83e\uddf5",
+  "Creole State":"\ud83c\udfb7",
+  "Diamond State":"\ud83d\udc8e",
+  "Empire State":"\ud83c\udfd9\ufe0f",
+  "Empire State of the South":"\ud83d\udc51",
+  "Equality State":"\u2696\ufe0f",
+  "Evergreen State":"\ud83c\udf3f",
+  "First State":"\u0031\ufe0f\u20e3",
+  "Flickertail State":"\ud83d\udc3f\ufe0f",
+  "Free State":"\ud83d\udd13",
+  "Garden State":"\ud83c\udf37",
+  "Gem State":"\ud83d\udca0",
+  "Golden State":"\ud83e\udd47",
+  "Gopher State":"\ud83d\udc39",
+  "Grand Canyon State":"\ud83c\udfdc\ufe0f",
+  "Granite State":"\ud83e\udea8",
+  "Great Lakes State":"\ud83c\udfde\ufe0f",
+  "Green Mountain State":"\u26f0\ufe0f",
+  "Hawkeye State":"\ud83e\udd85",
+  "Hoosier State":"\ud83c\udfc0",
+  "Jayhawker State":"\ud83e\udeb6",
+  "Keystone State":"\ud83d\udddd\ufe0f",
+  "Land of 10,000 Lakes":"\ud83d\udef6",
+  "Land of Enchantment":"\u2728",
+  "Land of Lincoln":"\ud83c\udfa9",
+  "The Last Frontier":"\ud83e\uddca",
+  "Little Rhody":"\ud83e\udd0f",
+  "Lone Star State":"\u2b50",
+  "Magnolia State":"\ud83c\udf38",
+  "Mother of Presidents":"\ud83c\udfdb\ufe0f",
+  "The Mount Rushmore State":"\ud83d\uddff",
+  "Mountain State":"\ud83c\udfd4\ufe0f",
+  "Natural State":"\ud83c\udfd5\ufe0f",
+  "North Star State":"\ud83c\udf1f",
+  "Nutmeg State":"\ud83e\uddc2",
+  "Ocean State":"\ud83c\udf0a",
+  "Old Colony State":"\ud83c\udfd8\ufe0f",
+  "The Old Dominion":"\ud83c\udff0",
+  "Old Line State":"\ud83e\ude96",
+  "Old North State":"\ud83e\udded",
+  "Palmetto State":"\ud83c\udf34",
+  "Peace Garden State":"\ud83d\udd4a\ufe0f",
+  "Peach State":"\ud83c\udf51",
+  "Pelican State":"\ud83d\udc26",
+  "Pine Tree State":"\ud83c\udf32",
+  "Prairie State":"\ud83c\udf3e",
+  "Sagebrush State":"\ud83c\udf35",
+  "Show Me State":"\ud83d\udc40",
+  "Silver State":"\ud83e\udd48",
+  "Sioux State":"\ud83c\udff9",
+  "Sooner State":"\ud83c\udfc3",
+  "Sugar State":"\ud83c\udf6c",
+  "Sunflower State":"\ud83c\udf3b",
+  "Sunshine State":"\u2600\ufe0f",
+  "Tar Heel State":"\ud83d\udc63",
+  "Treasure State":"\ud83d\udcb0",
+  "Volunteer State":"\ud83d\ude4b",
+  "Wolverine State":"\ud83d\udc3e",
+  "Yellowhammer State":"\ud83d\udc24"
+};
+const nickIcon=n=>NICKICON[n]?'<span class="nickicon" aria-hidden="true">'+NICKICON[n]+'</span>':"";
 const grpRow=(mark,label)=>`<tr class="grp"><td colspan="5"><b>${mark}</b><span>${label}</span></td></tr>`;
 function renderStates(mode){
   const idx=STATES.map((x,i)=>i);
