@@ -3314,11 +3314,20 @@ const bNick=()=>STATES.map(x=>bItem("What is the nickname of "+x[0]+"?",x[1],
   "State nicknames",2,"nick:"+x[0]));
 const bMotto=()=>STATES.map(x=>bItem("What is the motto of "+x[0]+"?",x[2],
   "State mottos",3,"motto:"+x[0]));
+/* A question that asks for the symbol cannot carry the symbol as its icon. */
+const noIcon=it=>{it.noicon=1;return it;};
 const bMyth=()=>MYTH.flatMap(m=>[
-  bItem(godIcon(m.g)+"Greek "+m.g+" \u2014 who is the Roman equivalent, and what do they rule over?",
+  bItem("Greek "+m.g+" \u2014 who is the Roman equivalent, and what do they rule over?",
     m.r+" \u2014 "+m.d.toLowerCase(),"Mythology",1,"myth:"+m.g,m.n),
   bItem("Which god or goddess rules over "+m.d.toLowerCase()+"? Give both names.",
-    m.g+" (Greek), "+m.r+" (Roman)","Mythology",2,"myth:"+m.g,m.n)]);
+    m.g+" (Greek), "+m.r+" (Roman)","Mythology",2,"myth:"+m.g,m.n)]
+  .concat(MYTHTERMS[m.g]?[
+    /* No icon on either of these: the icon is the symbol, and these two are
+       the questions about the symbol. */
+    noIcon(bItem("Greek "+m.g+" \u2014 what is this god's symbol?",
+      MYTHTERMS[m.g].s,"Mythology",2,"myth:"+m.g,m.n)),
+    bItem("Which god or goddess has the "+symShort(m.g)+" as a symbol? Give both names.",
+      m.g+" (Greek), "+m.r+" (Roman)","Mythology",2,"myth:"+m.g,m.n)]:[]));
 /* A memorize board, both ways round. Out loud there are no options to give
    the answer away, so the reverse -- "which root goes with 'sea or ocean'?" --
    costs nothing here, unlike the quiz. The hint prints under the revealed
@@ -3377,7 +3386,7 @@ function buzzNext(){
   B.revealed=false;B.left=set.secs||12;B.secs=B.left;
   $("#bSubj").textContent=B.cur.c;
   $("#bLvl").textContent="Level "+B.cur.l;
-  $("#bQ").innerHTML=esc(B.cur.q);
+  $("#bQ").innerHTML=itemGod(B.cur)+esc(B.cur.q);
   $("#bA").hidden=true;
   /* .trap carries a top margin and a rule, which a span throws away -- the
      note ran straight on from the answer. */
@@ -3885,6 +3894,21 @@ function qsMyth(){
     out.push(qItem("Which Roman god or goddess is this: "+m.d.toLowerCase()+"?",m.r,
       others(shuffle(MYTH.map(x=>x.r)),m.r),"Mythology",
       "This Roman god or goddess rules over "+m.d.toLowerCase()+".",null,"myth:"+m.g));
+    /* Both ways round, the way the gods' names already run. The symbol is
+       what Mythology Connections deals, so it is worth a board of its own. */
+    if(MYTHTERMS[m.g]){
+      const sym=symShort(m.g);
+      out.push(qItem("Which Greek god or goddess has the "+sym+" as a symbol?",m.g,
+        others(shuffle(MYTH.map(x=>x.g)),m.g),"Mythology",
+        "This Greek god or goddess has the "+sym+" as a symbol.",null,"myth:"+m.g));
+      /* The icon beside a named god IS that god's symbol, so a question asking
+         for the symbol has to go without it. */
+      const it=qItem("What is the symbol of Greek "+m.g+"?",sym,
+        others(likeLength(MYTH.filter(x=>MYTHTERMS[x.g]).map(x=>symShort(x.g)),sym),sym),
+        "Mythology","The symbol of Greek "+m.g+" is this.","What","myth:"+m.g);
+      it.noicon=1;
+      out.push(it);
+    }
     out.push(qItem("What is Greek "+m.g+" the god or goddess of?",m.d,
       others(likeLength(MYTH.map(x=>x.d),m.d),m.d),"Mythology",
       "Greek "+m.g+" is the god or goddess of this.","Who","myth:"+m.g));
@@ -5606,6 +5630,7 @@ const langMark=st=>{
    source: MYTHTERMS, which the game reads too. */
 const GODICON={};
 Object.keys(MYTHTERMS).forEach(g=>{GODICON[g]=MYTHTERMS[g].i;});
+const symShort=g=>MYTHTERMS[g]?MYTHTERMS[g].s.split(",")[0]:"";
 const godSymbol=g=>MYTHTERMS[g]
   ?'<span class="godicon" aria-hidden="true">'+MYTHTERMS[g].i+'</span>'+MYTHTERMS[g].s:"";
 const godIcon=g=>GODICON[g]?'<span class="godicon" aria-hidden="true">'+GODICON[g]+'</span>':"";
@@ -5805,6 +5830,7 @@ const idState=id=>{const m=/^(?:cap2?|nick2?|motto2?):(.+)$/.exec(String(id||"")
    named, and never beside the options, where four different pictures would
    pair the board for the student. */
 function itemGod(it){
+  if(it&&it.noicon)return "";
   const m=/^myth:(.+)$/.exec(String((it&&it.cid)||""));
   if(!m)return "";
   const g=m[1],r=(MYTH.find(x=>x.g===g)||{}).r||"";
