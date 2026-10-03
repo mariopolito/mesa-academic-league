@@ -683,6 +683,11 @@ kbd{
   border:1px solid var(--line);border-radius:2px;background:var(--surface);
 }
 .tenseicon{margin-right:8px;font-size:15px;line-height:1}
+.godicon{margin-right:8px;font-size:15px;line-height:1}
+/* The language a motto is in. Windows draws country flags as two letters, so
+   the mark is a thing, not a flag, and the full name is on the title. */
+.langmark{margin-right:8px;font-size:13px;line-height:1;cursor:help}
+#stSort .chip{white-space:nowrap}
 /* One picture per event, on the home tile and in front of the panel title. */
 .evicon{margin-right:9px;font-size:1.05em;line-height:1}
 .tile .t{display:flex;align-items:center;gap:0}
@@ -703,11 +708,11 @@ kbd{
 .conntile.sel{border-color:var(--gold);background:color-mix(in srgb,var(--gold-bright) 18%,transparent)}
 /* A hinted pair is outlined, not filled: the outline sits inside the tile so
    it survives being selected, which keeps both states readable at once. */
-.conntile.hint{outline:3px solid var(--line);outline-offset:-3px}
-.conntile.h0{outline-color:var(--go)}
-.conntile.h1{outline-color:var(--gold)}
-.conntile.h2{outline-color:var(--buzz)}
-.conntile.h3{outline-color:var(--muted)}
+.conntile.paired{outline:3px solid var(--line);outline-offset:-3px}
+.conntile.pair0{outline-color:var(--go)}
+.conntile.pair1{outline-color:var(--gold)}
+.conntile.pair2{outline-color:var(--buzz)}
+.conntile.pair3{outline-color:var(--muted)}
 .conntile.bad{border-color:var(--miss);animation:shake .32s}
 /* A solved group takes the row the four tiles came out of, the way the
    newspaper puzzle stacks them up the page. */
@@ -3491,31 +3496,31 @@ function qCards(x){
 }
 const cardsQ   = subj=>Q.filter(x=>inQ(x)&&(!subj||x.s===subj)&&lvOK(C,x)).flatMap(qCards);
 const cardsTip = ()=>TIPOFFS.map((t,i)=>[t[0],t[1],"Tip-off",TIPHINTS[i]||"","tip:"+i]);
-const cardsCap = ()=>CAPS.map(c=>["What is the capital of "+c[0]+"?",c[1],"US Geography",
+const cardsCap = ()=>flagCards(CAPS.map(c=>["What is the capital of "+c[0]+"?",c[1],"US Geography",
   "Starts with \u201c"+c[1][0]+"\u201d \u00b7 "+c[1].replace(/[^A-Za-z]/g,"").length+" letters",
-  "cap:"+c[0]]);
-const cardsCap2= ()=>CAPS.map(c=>[c[1]+" is the capital of which state?",c[0],"US Geography",
+  "cap:"+c[0]]));
+const cardsCap2= ()=>flagCards(CAPS.map(c=>[c[1]+" is the capital of which state?",c[0],"US Geography",
   "That state\u2019s motto is: "+((STATES.find(x=>x[0]===c[0])||["","",""])[2]),
-  "cap2:"+c[0]]);
+  "cap2:"+c[0]]));
 const stCap=st=>(CAPS.find(c=>c[0]===st)||["",""])[1];
-const cardsNick= ()=>STATES.map(x=>["Nickname(s) for "+x[0]+"?",x[1],"US Geography",
+const cardsNick= ()=>flagCards(STATES.map(x=>["Nickname(s) for "+x[0]+"?",x[1],"US Geography",
   "Its capital is "+stCap(x[0])+", and the first nickname starts with \u201c"+x[1][0]+"\u201d.",
-  "nick:"+x[0]]);
+  "nick:"+x[0]]));
 /* The other way round. A deck that only ever asks state -> nickname trains one
    direction of a fact the judge can ask from either end, which is why the
    capitals had a reversed deck from the start -- these two now have one too,
    inside the same deck rather than beside it. */
-const cardsNick2=()=>STATES.map(x=>[
+const cardsNick2=()=>flagCards(STATES.map(x=>[
   "Which state has "+(x[1].includes("/")?"these nicknames":"this nickname")+": "+x[1]+"?",
-  x[0],"US Geography","Its capital is "+stCap(x[0])+".","nick2:"+x[0]]);
-const cardsMotto=()=>STATES.map(x=>{
+  x[0],"US Geography","Its capital is "+stCap(x[0])+".","nick2:"+x[0]]));
+const cardsMotto=()=>flagCards(STATES.map(x=>{
   const nfo=STATEINFO[x[0]]||{m:""};
   const lang=(nfo.m.split(/[:.]/)[0]||"").trim();
   const words=x[2].replace(/&amp;/g,"and").split(/\s+/).filter(Boolean).length;
   return ["Motto of "+x[0]+"?",x[2],"US Geography",
-    (lang?lang+" \u00b7 ":"")+words+" word"+(words>1?"s":""),"motto:"+x[0]];});
-const cardsMotto2=()=>STATES.map(x=>["Which state\u2019s motto is \u201c"+x[2]+"\u201d?",x[0],"US Geography",
-  "Its capital is "+stCap(x[0])+".","motto2:"+x[0]]);
+    (lang?lang+" \u00b7 ":"")+words+" word"+(words>1?"s":""),"motto:"+x[0]];}));
+const cardsMotto2=()=>flagCards(STATES.map(x=>["Which state\u2019s motto is \u201c"+x[2]+"\u201d?",x[0],"US Geography",
+  "Its capital is "+stCap(x[0])+".","motto2:"+x[0]]));
 const cardsSpell=()=>SPELL.filter(x=>inQ(x)&&lvOK(C,x)).map(x=>[
   '<span class="cluelabel">Definition</span>'+x.d+'<div class="cluesent">'+blankOut(x.s,x.w)+'</div>'+sayBtns(x.w)+'<div class="cluecount">'+x.w.length+' letters</div>',
   '<div class="spellout big">'+x.w.split("").join("-").toUpperCase()+'</div><div class="theword">'+x.w+'</div>'+(x.h?'<div class="trap">'+x.h+'</div>':''),
@@ -4173,8 +4178,8 @@ function renderQuiz(){
     <div class="stage-top"><span class="tag">${cur.c}</span><span class="tag lv">${cur.ref?"Reference":"Level "+cur.l}</span>
       <span class="timer">${QZ.i+1} / ${QZ.set.length}</span></div>
     <div class="stage-body">
-      <p class="qtext">${esc(cur.q)}</p>
-      <div class="opts arrive">${opts.map((o,i)=>`<button class="opt" data-a="${encodeURIComponent(o)}"><u>${"ABCD"[i]}</u><span>${o}</span></button>`).join("")}</div>
+      <p class="qtext">${(st=>st&&cur.q.indexOf(st)>=0?flagImg(st):"")(idState(cur.cid))}${esc(cur.q)}</p>
+      <div class="opts arrive">${opts.map((o,i)=>`<button class="opt" data-a="${encodeURIComponent(o)}"><u>${"ABCD"[i]}</u><span>${flagImg(o)}${o}</span></button>`).join("")}</div>
     </div>
     <div class="stage-foot" id="qzFoot"><span class="hint">Four choices. Nothing moves until you pick one.</span></div>
   </div>`;
@@ -4732,11 +4737,11 @@ function startMatch(){
   $("#matchArea").innerHTML=`<div class="matchgrid">
     <div class="mcol">
       <div class="mhead lft" style="grid-row:1">${set.l}</div>
-      ${M.left.map((x,i)=>`<button class="mtile lft" style="grid-row:${i+2}" data-side="L" data-k="${x.k}"><u>${"ABCDEF"[i]}</u><span>${x.t}</span></button>`).join("")}
+      ${M.left.map((x,i)=>`<button class="mtile lft" style="grid-row:${i+2}" data-side="L" data-k="${x.k}"><u>${"ABCDEF"[i]}</u><span>${flagImg(x.t)}${x.t}</span></button>`).join("")}
     </div>
     <div class="mcol">
       <div class="mhead rgt" style="grid-row:1">${set.r}</div>
-      ${M.right.map((x,i)=>`<button class="mtile rgt" style="grid-row:${i+2}" data-side="R" data-k="${x.k}"><u>${i+1}</u><span>${x.t}</span></button>`).join("")}
+      ${M.right.map((x,i)=>`<button class="mtile rgt" style="grid-row:${i+2}" data-side="R" data-k="${x.k}"><u>${i+1}</u><span>${flagImg(x.t)}${x.t}</span></button>`).join("")}
     </div>
   </div>
   <p class="hint" id="mMsg" style="margin:16px 0 0">Click a lettered tile, then the numbered tile that matches it.
@@ -4755,8 +4760,8 @@ function reviewBoard(host,l,r,pairs,missed){
     <div class="mhead rgt" style="grid-row:1">${esc(r)}</div>`
     +pairs.map((p,i)=>{
       const cls=missed.has(i)?"tookago":"firsttry";
-      return `<div class="mtile lft ${cls}" style="grid-row:${i+2}"><u>${missed.has(i)?"\u21ba":"\u2713"}</u><span>${esc(p[0])}</span></div>
-        <div class="mtile rgt ${cls}" style="grid-row:${i+2}"><span>${esc(p[1])}</span></div>`;
+      return `<div class="mtile lft ${cls}" style="grid-row:${i+2}"><u>${missed.has(i)?"\u21ba":"\u2713"}</u><span>${flagImg(p[0])}${esc(p[0])}</span></div>
+        <div class="mtile rgt ${cls}" style="grid-row:${i+2}"><span>${flagImg(p[1])}${esc(p[1])}</span></div>`;
     }).join("");
   const note=document.createElement("p");
   note.className="hint revkey";
@@ -4864,7 +4869,7 @@ function startConn(){
 }
 function connRow(x){
   const g=CN.groups[x.i];
-  return `<div class="connrow c${x.i} ${x.how}"><b>${esc(g.state)}</b>`
+  return `<div class="connrow c${x.i} ${x.how}"><b>${flagImg(g.state)}${esc(g.state)}</b>`
     +CNKINDS.slice(1).map(k=>`<i>${CNLABEL[k]}</i> ${esc(g[k])}`).join(" &middot; ")+`</div>`;
 }
 function renderConn(msg,tone){
@@ -4876,12 +4881,12 @@ function renderConn(msg,tone){
     <div class="connsolved">${CN.solved.map(connRow).join("")}</div>
     <div class="connmsgwrap"><p class="connmsg ${tone||""}" id="cnMsg">${msg}</p></div>
     ${playing?`<div class="conngrid">${CN.tiles.map(x=>
-      `<button class="conntile${CN.sel.includes(x.id)?" sel":""}${cnHintClass(x.id)}" data-i="${x.id}">${esc(x.t)}</button>`
+      `<button class="conntile${CN.sel.includes(x.id)?" sel":""}${cnHintClass(x.id)}" data-i="${x.id}">${flagImg(x.t)}${esc(x.t)}</button>`
       ).join("")}</div>`:""}
     <div class="connbar">
       ${playing?`<span class="connmiss">Mistakes remaining:${dots.join("")}</span>`:"<span></span>"}
       <span class="connbtns">
-        ${playing?`<button class="btn ghost small" id="cnPair"${CN.hintsLeft?"":" disabled"}>Pair${CN.hintsLeft?" \u00b7 "+CN.hintsLeft:""}</button>
+        ${playing?`<button class="btn ghost small" id="cnPair"${CN.hintsLeft?"":" disabled"} title="Hint: outlines two tiles that belong to the same state">\ud83d\udca1 Hint: a pair${CN.hintsLeft?" \u00b7 "+CN.hintsLeft:""}</button>
         <button class="btn ghost small" id="cnShuf">Shuffle</button>
         <button class="btn ghost small" id="cnClear">Deselect all</button>
         <button class="btn small" id="cnGo"${CN.sel.length===4?"":" disabled"}>Submit</button>`:""}
@@ -4904,7 +4909,7 @@ function renderConn(msg,tone){
    presses light up four different states rather than solving one of them. */
 function cnHintClass(id){
   const h=CN.hints.find(x=>x.ids.indexOf(id)>=0);
-  return h?" hint h"+h.g:"";
+  return h?" paired pair"+h.g:"";
 }
 function cnPair(){
   if(CN.over||!CN.hintsLeft)return;
@@ -4920,8 +4925,8 @@ function cnPair(){
   if(two.length<2)return;
   CN.hints.push({g:g,ids:two});
   CN.hintsLeft--;
-  renderConn("<b>These two go together.</b> They are two of one state\u2019s four."
-    +(CN.hintsLeft?" "+CN.hintsLeft+" more pair"+(CN.hintsLeft>1?"s":"")+" to ask for.":" That was the last one."),null);
+  renderConn("<b>Hint \u2014 these two go together.</b> They are two of one state\u2019s four."
+    +(CN.hintsLeft?" "+CN.hintsLeft+" more hint"+(CN.hintsLeft>1?"s":"")+" left.":" That was the last hint."),null);
 }
 function cnTap(id){
   if(CN.over)return;
@@ -4974,9 +4979,8 @@ function cnSubmit(){
     :"<b>Not a set.</b> Those tiles come from "+Object.keys(count).length+" different states.";
   $("#matchArea").querySelectorAll(".conntile.sel").forEach(b=>b.classList.add("bad"));
   setTimeout(()=>{
-    CN.sel=[];
-    if(CN.miss>=CNMISS)cnOut(best===3);
-    else renderConn(msg,"bad");
+    if(CN.miss>=CNMISS){CN.sel=[];cnOut(best===3);}
+    else renderConn(msg+" Your four are still selected \u2014 swap one and try again.","bad");
   },360);
 }
 function cnOut(near){
@@ -5074,7 +5078,7 @@ function typeNext(){
       <span class="tag lv">Level ${it.lv||set.lv||1}</span>
       <span class="timer">Run: ${TY.run}</span></div>
     <div class="stage-body">
-      ${it.raw?it.q:'<p class="qtext">'+it.q+'</p>'}
+      ${it.raw?it.q:'<p class="qtext">'+((st)=>st&&it.q.indexOf(st)>=0?flagImg(st):"")(idState(it.cid))+it.q+'</p>'}
       <div style="margin-top:18px;max-width:420px"><input type="text" id="tyIn" placeholder="${it.ph||"Type your answer"}" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
       <div id="tyV"></div>
     </div>
@@ -5095,7 +5099,7 @@ function typeCheck(){
   const accept=[norm(it.a)].concat((it.extra?it.extra(it.a):[]).map(norm));
   const ok=accept.includes(norm(typed));
   $("#tyV").innerHTML=`<div class="verdict ${ok?"ok":"no"}">
-    ${ok?"Correct.":"Not quite \u2014 the answer is <b>"+it.a+"</b>."}
+    ${ok?"Correct.":"Not quite \u2014 the answer is <b>"+flagImg(it.a)+it.a+"</b>."}
     ${it.show?"<div>"+it.show+"</div>":""}
     ${(!ok&&typed&&TY.set==="spell")?'<div class="youtyped">You spelled it <b>'+esc(typed)+'</b>.</div>':""}
     ${it.note?'<div class="trap">'+it.note+'</div>':""}</div>`;
@@ -5495,6 +5499,34 @@ document.addEventListener("keydown",e=>{
    differ by one word are hard to tell apart on a page; the icon gives each
    one a shape, and the gloss says what the shape means. Keyed by the name
    from the sheet -- a renamed tense loses its icon, it never gets a wrong one. */
+/* The language a motto is written in, taken from the start of its own
+   translation note ("Latin: ...", "English - ...", "Italian, not Latin"), and
+   a picture for each one. Country flags would have been the obvious mark and
+   are the one thing Windows will not draw -- it renders them as two letters -
+   so these are things instead: a temple for Latin, a vase for Greek. */
+const LANGICON={
+  "Latin":"\ud83c\udfdb\ufe0f","English":"\ud83d\udd24","Greek":"\ud83c\udffa",
+  "French":"\u269c\ufe0f","Spanish":"\ud83c\udf1e","Italian":"\ud83c\udfad",
+  "Hawaiian":"\ud83c\udf3a","Chinook Jargon":"\ud83e\udeb6"
+};
+function mottoLang(st){
+  const m=(STATEINFO[st]||{}).m||"";
+  const first=m.split(/[:.,\u2014\u2013-]/)[0].trim();
+  return first||"Unknown";
+}
+const langMark=st=>{
+  const L=mottoLang(st);
+  return '<span class="langmark" title="'+esc(L)+'">'+(LANGICON[L]||"\ud83d\udde3\ufe0f")+'</span>';
+};
+/* A picture for each god: the thing they are known by, which is what the
+   packet's own "rules over" column describes. */
+const GODICON={
+  Zeus:"\u26a1",Hera:"\ud83d\udc51",Poseidon:"\ud83d\udd31",Hades:"\ud83d\udc80",
+  Athena:"\ud83e\udd89",Aphrodite:"\ud83d\udc96",Ares:"\u2694\ufe0f",Apollo:"\u2600\ufe0f",
+  Artemis:"\ud83c\udff9",Hermes:"\u2709\ufe0f",Demeter:"\ud83c\udf3e",Hephaestus:"\ud83d\udd28",
+  Dionysus:"\ud83c\udf47",Hestia:"\ud83d\udd25"
+};
+const godIcon=g=>GODICON[g]?'<span class="godicon" aria-hidden="true">'+GODICON[g]+'</span>':"";
 const TENSEICON={
   "Simple past":["\ud83c\udfc1","over and done, one word"],
   "Simple present":["\ud83d\udd01","the loop: it happens again and again"],
@@ -5529,12 +5561,15 @@ $("#sheetArea").innerHTML=`
 
 <div class="sheet" id="sh-states">
   <h3>State files</h3>
-  <p class="sub">Capital, nicknames and motto for all fifty. <b>Click any row</b> for the translation and where the nickname came from. Switch to <b>A&ndash;Z by capital</b> to see them the way the study guide lists them, grouped by first letter.</p>
+  <p class="sub">Capital, nicknames and motto for all fifty. <b>Click any row</b> for the translation and where the nickname came from. The five sorts group the same fifty states a different way each time &mdash; <b>A&ndash;Z by nickname</b> gives every nickname its own row, and <b>by motto language</b> puts the twenty Latin mottos together.</p>
   <div class="sheettools">
     <input type="text" id="stFilter" placeholder="Filter by state, capital, nickname or motto&hellip;" autocomplete="off">
     <div class="chips" id="stSort">
       <button class="chip" data-v="state" aria-pressed="true">A&ndash;Z by state</button>
       <button class="chip" data-v="city" aria-pressed="false">A&ndash;Z by capital</button>
+      <button class="chip" data-v="nick" aria-pressed="false">A&ndash;Z by nickname</button>
+      <button class="chip" data-v="nickn" aria-pressed="false">By number of nicknames</button>
+      <button class="chip" data-v="motto" aria-pressed="false">By motto language</button>
     </div>
     <button class="btn ghost small" id="stAll">Open all</button>
     <button class="btn ghost small" id="stNone">Close all</button>
@@ -5607,7 +5642,7 @@ $("#sheetArea").innerHTML=`
   <p class="sub">From the back page of the packet, which files it under no quarter &mdash; so it is fair game whichever quarters you have selected. <b>Click a row</b> for the hook that makes it stick.</p>
   <div class="tablewrap"><table>
     <thead><tr><th>Greek</th><th>Roman</th><th>Rules over</th><th></th></tr></thead>
-    <tbody>${MYTH.map((m,i)=>`<tr class="rowq" data-my="${i}"><td class="st">${m.g}</td><td><b>${m.r}</b></td><td>${m.d}</td><td class="chev">+</td></tr>
+    <tbody>${MYTH.map((m,i)=>`<tr class="rowq" data-my="${i}"><td class="st">${godIcon(m.g)}${m.g}</td><td><b>${m.r}</b></td><td>${m.d}</td><td class="chev">+</td></tr>
       <tr class="det" data-dmy="${i}" hidden><td colspan="4"><div class="detin"><div class="detcol"><span class="cluelabel">Hook</span><p>${m.n}</p></div></div></td></tr>`).join("")}</tbody>
   </table></div>
 </div>
@@ -5681,19 +5716,79 @@ const FLAGS={
 "Wyoming":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAcCAMAAAAkyw3kAAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1MAAA6mAAADqYAAAXcJy6UTwAAAFZUExURb8KMP///wAgWwsqYihDdQ4sZBQxaG+ConCBoydDdEVdiH+QrbnC0oOTrwopYQUkXoeWsqm0yK64y6axxXCCo4STsLS9z5mmvYWUsF5ymPX2+ens8aaxxm1/oSVAc2d6nfn6+1drk5CeuJKguaeyxpqmvcHI1mx+oQMjXTdQftLX4mJ2m5yov5qmvoiXtJOguJaku5ikvISUsExijA8tZdfb5VBmj5GeuJ6qwHKEpJWiuqCrwXWHpvb3+UdeiQEhXN/j6v39/lFnkHiIqI2btqGswpShultvlq+6zL7G1XeIqMDI111xl22AoXiJqGt9n1Jnj36PrImYszlSgK23ygYlX15ylnyMrFVqkXeJqImXs+Lm7OHl7CdCdLfA0XOFpQgnYBYzae7w9BUyaUNbhiE9cFRpkSA8cP7+/l9zmMTL2c7U3zZPfs/V4LO9zilEdX6OrCtGdwwqY1PckMYAAAABYktHRAH/Ai3eAAAAB3RJTUUH6gkVExUbsmxlSQAAAOBJREFUOMtjYKABYCQCQBQyEQSDTSEzCysxCtnYOTi5uHl4+fAp5BcQFBIWERUTl5CUkpaRlcOpUJ6RUUFRSVlFVU1dHBR4PBo4FGoyMmpp6+jq6RsYGoGD2RiHQhNGRlMzcwtLK2sdG5A6WzscCu0dGB2dnF1c3VzdPUAKPVlw+dqLkdHbx9fPPyDQEaQwKBhn8ITIh4aFR0RGRTPGxMYxxifgC/DEJEbGZKaUVKY0Rhf8MZPumMEGolkzMgnEdVY2mMrJTSCgMC8fTPkVEEo9hRCqqGjwJlw8ConNrlQGAMHJIdSAAO4jAAAAJXRFWHRkYXRlOmNyZWF0ZQAyMDI2LTA5LTIxVDE5OjIxOjI3KzAwOjAw8MygawAAACV0RVh0ZGF0ZTptb2RpZnkAMjAyNi0wOS0yMVQxOToyMToyNyswMDowMIGRGNcAAAAodEVYdGRhdGU6dGltZXN0YW1wADIwMjYtMDktMjFUMTk6MjE6MjcrMDA6MDDWhDkIAAAAAElFTkSuQmCC"
 };
 const flagImg=st=>FLAGS[st]?'<img class="flagicon" src="'+FLAGS[st]+'" alt="">':"";
-function stateRow(i){
+/* The id a card, tile or quiz item already carries says which state it is
+   about: cap:Ohio, cap2:Ohio, nick2:Ohio, motto:Ohio. */
+const idState=id=>{const m=/^(?:cap2?|nick2?|motto2?):(.+)$/.exec(String(id||""));return m&&FLAGS[m[1]]?m[1]:"";};
+/* A deck's cards, with the flag put on whichever face names the state. */
+function flagCards(list){
+  return list.map(c=>{
+    const st=idState(c[4]);
+    if(!st)return c;
+    const img=flagImg(st);
+    const front=String(c[0]).indexOf(st)>=0?img+c[0]:c[0];
+    const back=front===c[0]?img+c[1]:c[1];
+    return [front,back,c[2],c[3],c[4]];
+  });
+}
+/* `key` is what the row and its detail are keyed by. It is the state's index
+   in every sort but one: A-Z by nickname gives a state with three nicknames
+   three rows, and two rows sharing a key would open each other's detail. */
+function stateRow(i,opts){
+  opts=opts||{};
   const x=STATES[i], cap=(CAPS.find(c=>c[0]===x[0])||["",""])[1], nfo=STATEINFO[x[0]]||{n:"",m:""};
-  return `<tr class="rowq" data-i="${i}"><td class="st">${flagImg(x[0])}${x[0]}</td><td>${cap}</td><td>${x[1]}</td><td class="mot">${x[2]}</td><td class="chev">+</td></tr>
-    <tr class="det" data-d="${i}" hidden><td colspan="5"><div class="detin">
+  const key=opts.key===undefined?i:opts.key;
+  const nick=opts.nick?`<b>${opts.nick}</b>`:x[1];
+  return `<tr class="rowq" data-i="${key}"><td class="st">${flagImg(x[0])}${x[0]}</td><td>${cap}</td><td>${nick}</td><td class="mot">${langMark(x[0])}${x[2]}</td><td class="chev">+</td></tr>
+    <tr class="det" data-d="${key}" hidden><td colspan="5"><div class="detin">
       <div class="detcol"><span class="cluelabel">What the motto means</span><p>${nfo.m}</p></div>
       <div class="detcol"><span class="cluelabel">Where the nickname came from</span><p>${nfo.n}</p></div>
     </div></td></tr>`;
 }
+const stateNicks=i=>STATES[i][1].split("/").map(n=>n.trim()).filter(Boolean);
+const grpRow=(mark,label)=>`<tr class="grp"><td colspan="5"><b>${mark}</b><span>${label}</span></td></tr>`;
 function renderStates(mode){
   const idx=STATES.map((x,i)=>i);
   const capOf=i=>(CAPS.find(c=>c[0]===STATES[i][0])||["",""])[1];
   let html="";
-  if(mode==="city"){
+  if(mode==="nick"){
+    /* One row per nickname, not per state: a nickname is the thing being
+       looked up here, and the four states with three of them should turn up
+       three times. "Sunshine State" belongs to two states and lands twice. */
+    const rows=[];
+    idx.forEach(i=>stateNicks(i).forEach(n=>rows.push({i:i,n:n})));
+    rows.sort((a,b)=>a.n.replace(/^The\s+/i,"").localeCompare(b.n.replace(/^The\s+/i,"")));
+    const letterOf=r=>r.n.replace(/^The\s+/i,"")[0].toUpperCase();
+    const counts={};
+    rows.forEach(r=>{const L=letterOf(r);counts[L]=(counts[L]||0)+1;});
+    let letter="";
+    rows.forEach((r,n)=>{
+      const L=letterOf(r);
+      if(L!==letter){
+        letter=L;
+        html+=grpRow(L,counts[L]+" nickname"+(counts[L]>1?"s":"")+" begin"+(counts[L]>1?"":"s")+" with "+L);
+      }
+      html+=stateRow(r.i,{key:"n"+n,nick:r.n});
+    });
+  }else if(mode==="nickn"){
+    /* How many a state has: the four with three are worth knowing as a set. */
+    const by={};
+    idx.forEach(i=>{const c=stateNicks(i).length;(by[c]=by[c]||[]).push(i);});
+    Object.keys(by).map(Number).sort((a,b)=>b-a).forEach(c=>{
+      html+=grpRow(c,by[c].length+" state"+(by[c].length>1?"s":"")+" with "+c+" nickname"+(c>1?"s":""));
+      by[c].forEach(i=>{html+=stateRow(i);});
+    });
+  }else if(mode==="motto"){
+    /* Grouped by the language the motto is written in, biggest group first,
+       alphabetical inside it. Twenty are Latin and the one-offs are the
+       memorable ones -- Hawaiian, French, Chinook Jargon. */
+    const by={};
+    idx.forEach(i=>{const L=mottoLang(STATES[i][0]);(by[L]=by[L]||[]).push(i);});
+    Object.keys(by).sort((a,b)=>by[b].length-by[a].length||a.localeCompare(b)).forEach(L=>{
+      html+=grpRow(LANGICON[L]||"\ud83d\udde3\ufe0f",
+        L+" \u00b7 "+by[L].length+" motto"+(by[L].length>1?"s":""));
+      by[L].sort((a,b)=>STATES[a][0].localeCompare(STATES[b][0])).forEach(i=>{html+=stateRow(i);});
+    });
+  }else if(mode==="city"){
     idx.sort((a,b)=>capOf(a).localeCompare(capOf(b)));
     const counts={};
     idx.forEach(i=>{const L=capOf(i)[0].toUpperCase();counts[L]=(counts[L]||0)+1;});
