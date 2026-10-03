@@ -689,6 +689,11 @@ kbd{
 .langmark{margin-right:8px;font-size:13px;line-height:1;cursor:help}
 .nickicon{margin-right:8px;font-size:14px;line-height:1}
 .nickcount{color:var(--muted);font-size:12px;font-weight:700}
+/* The state column is bold by default; it steps back when the table is
+   sorted by something else. */
+td.st.nb{font-weight:400}
+td.sym{white-space:nowrap}
+.typeicon{margin-right:8px;font-size:15px;line-height:1;cursor:help}
 #stSort .chip{white-space:nowrap}
 /* One picture per event, on the home tile and in front of the panel title. */
 .evicon{margin-right:9px;font-size:1.05em;line-height:1}
@@ -4836,20 +4841,20 @@ const CNLABEL={state:"State",cap:"Capital",nick:"Nickname",motto:"Motto"};
    column, split; the symbol is the object the god is always drawn with, and
    it is what gives Ares a fourth tile -- Ares, Mars, war is only three. */
 const MYTHTERMS={
-  Zeus:{d:["the sky","thunder","king of the gods"],s:"thunderbolt"},
-  Hera:{d:["marriage","family"],s:"peacock"},
-  Poseidon:{d:["the sea","earthquakes","horses"],s:"trident"},
-  Hades:{d:["the underworld","wealth"],s:"Cerberus"},
-  Athena:{d:["wisdom","strategy","crafts"],s:"owl"},
-  Aphrodite:{d:["love","beauty","desire"],s:"dove"},
-  Ares:{d:["war"],s:"spear"},
-  Apollo:{d:["the sun","healing","prophecy"],s:"lyre"},
-  Artemis:{d:["the hunt","the moon","the wilderness"],s:"bow"},
-  Hermes:{d:["messages","commerce"],s:"winged sandals"},
-  Demeter:{d:["agriculture","grain","fertility"],s:"sheaf of wheat"},
-  Hephaestus:{d:["fire","the forge","metalworking"],s:"hammer"},
-  Dionysus:{d:["wine","ritual madness"],s:"grapevine"},
-  Hestia:{d:["the hearth","home","family"],s:"hearth fire"}
+  Zeus:{d:["the sky","thunder","king of the gods"],s:"thunderbolt",i:"\u26a1"},
+  Hera:{d:["marriage","family"],s:"peacock",i:"\ud83e\udd9a"},
+  Poseidon:{d:["the sea","earthquakes","horses"],s:"trident",i:"\ud83d\udd31"},
+  Hades:{d:["the underworld","wealth"],s:"Cerberus, the three-headed dog",i:"\ud83d\udc15"},
+  Athena:{d:["wisdom","strategy","crafts"],s:"owl",i:"\ud83e\udd89"},
+  Aphrodite:{d:["love","beauty","desire"],s:"dove",i:"\ud83d\udd4a\ufe0f"},
+  Ares:{d:["war"],s:"spear and shield",i:"\u2694\ufe0f"},
+  Apollo:{d:["the sun","healing","prophecy"],s:"lyre",i:"\ud83c\udfb5"},
+  Artemis:{d:["the hunt","the moon","the wilderness"],s:"bow",i:"\ud83c\udff9"},
+  Hermes:{d:["messages","commerce"],s:"winged sandals",i:"\ud83d\udc5f"},
+  Demeter:{d:["agriculture","grain","fertility"],s:"sheaf of wheat",i:"\ud83c\udf3e"},
+  Hephaestus:{d:["fire","the forge","metalworking"],s:"hammer",i:"\ud83d\udd28"},
+  Dionysus:{d:["wine","ritual madness"],s:"grapevine",i:"\ud83c\udf47"},
+  Hestia:{d:["the hearth","home","family"],s:"hearth fire",i:"\ud83d\udd25"}
 };
 
 /* A tile that names its own state hands the group over (Indianapolis,
@@ -5578,14 +5583,16 @@ const langMark=st=>{
   const L=mottoLang(st);
   return '<span class="langmark" title="'+esc(L)+'">'+(LANGICON[L]||"\ud83d\udde3\ufe0f")+'</span>';
 };
-/* A picture for each god: the thing they are known by, which is what the
-   packet's own "rules over" column describes. */
-const GODICON={
-  Zeus:"\u26a1",Hera:"\ud83d\udc51",Poseidon:"\ud83d\udd31",Hades:"\ud83d\udc80",
-  Athena:"\ud83e\udd89",Aphrodite:"\ud83d\udc96",Ares:"\u2694\ufe0f",Apollo:"\u2600\ufe0f",
-  Artemis:"\ud83c\udff9",Hermes:"\u2709\ufe0f",Demeter:"\ud83c\udf3e",Hephaestus:"\ud83d\udd28",
-  Dionysus:"\ud83c\udf47",Hestia:"\ud83d\udd25"
-};
+/* The gods table prints the picture in its Symbol column, beside the word it
+   stands for, and not again next to the name -- the same icon twice in one row
+   reads as a mistake.
+   A god's picture is their symbol, so the thing a student meets on a card is
+   the thing the reference table names and Mythology Connections asks for. One
+   source: MYTHTERMS, which the game reads too. */
+const GODICON={};
+Object.keys(MYTHTERMS).forEach(g=>{GODICON[g]=MYTHTERMS[g].i;});
+const godSymbol=g=>MYTHTERMS[g]
+  ?'<span class="godicon" aria-hidden="true">'+MYTHTERMS[g].i+'</span>'+MYTHTERMS[g].s:"";
 const godIcon=g=>GODICON[g]?'<span class="godicon" aria-hidden="true">'+GODICON[g]+'</span>':"";
 const TENSEICON={
   "Simple past":["\ud83c\udfc1","over and done, one word"],
@@ -5659,10 +5666,10 @@ $("#sheetArea").innerHTML=`
     <p class="ex">The book sat <u>near the lamp</u>.</p>
     <p><b>Trap:</b> the subject of a sentence may never come from a prepositional phrase.</p></div>
   <div class="note"><h4>The four sentence types</h4>
-    <p><b>Simple</b> &mdash; one independent clause. <span class="ex">The children sat.</span></p>
-    <p><b>Compound</b> &mdash; two or more independent clauses joined by a semicolon or a conjunction (<em>and, but, so</em>). <span class="ex">The children sat, but they were not happy.</span></p>
-    <p><b>Complex</b> &mdash; one independent clause and at least one dependent clause. <span class="ex">The children sat because they were told to.</span></p>
-    <p><b>Compound-complex</b> &mdash; at least two independent clauses and at least one dependent clause. <span class="ex">The children sat, but they got up before they were supposed to.</span></p></div>
+    <p><span class="typeicon" title="One block: a single independent clause">&#129521;</span><b>Simple</b> &mdash; one independent clause. <span class="ex">The children sat.</span></p>
+    <p><span class="typeicon" title="A link: two clauses that could each stand alone, joined">&#128279;</span><b>Compound</b> &mdash; two or more independent clauses joined by a semicolon or a conjunction (<em>and, but, so</em>). <span class="ex">The children sat, but they were not happy.</span></p>
+    <p><span class="typeicon" title="A trunk with a branch: one clause stands, the other hangs off it">&#127795;</span><b>Complex</b> &mdash; one independent clause and at least one dependent clause. <span class="ex">The children sat because they were told to.</span></p>
+    <p><span class="typeicon" title="Two trunks and a branch: both at once">&#128376;</span><b>Compound-complex</b> &mdash; at least two independent clauses and at least one dependent clause. <span class="ex">The children sat, but they got up before they were supposed to.</span></p></div>
 </div>
 
 <div class="sheet" id="sh-tense">
@@ -5699,11 +5706,11 @@ $("#sheetArea").innerHTML=`
 
 <div class="sheet" id="sh-myth">
   <h3>Greek &amp; Roman gods</h3>
-  <p class="sub">From the back page of the packet, which files it under no quarter &mdash; so it is fair game whichever quarters you have selected. <b>Click a row</b> for the hook that makes it stick.</p>
+  <p class="sub">From the back page of the packet, which files it under no quarter &mdash; so it is fair game whichever quarters you have selected. <b>Click a row</b> for the hook that makes it stick. The <b>symbol</b> is the object each god is always drawn with; <b>Mythology Connections</b> in Matching asks for it.</p>
   <div class="tablewrap"><table>
-    <thead><tr><th>Greek</th><th>Roman</th><th>Rules over</th><th></th></tr></thead>
-    <tbody>${MYTH.map((m,i)=>`<tr class="rowq" data-my="${i}"><td class="st">${godIcon(m.g)}${m.g}</td><td><b>${m.r}</b></td><td>${m.d}</td><td class="chev">+</td></tr>
-      <tr class="det" data-dmy="${i}" hidden><td colspan="4"><div class="detin"><div class="detcol"><span class="cluelabel">Hook</span><p>${m.n}</p></div></div></td></tr>`).join("")}</tbody>
+    <thead><tr><th>Greek</th><th>Roman</th><th>Rules over</th><th>Symbol</th><th></th></tr></thead>
+    <tbody>${MYTH.map((m,i)=>`<tr class="rowq" data-my="${i}"><td class="st">${m.g}</td><td><b>${m.r}</b></td><td>${m.d}</td><td class="sym">${godSymbol(m.g)}</td><td class="chev">+</td></tr>
+      <tr class="det" data-dmy="${i}" hidden><td colspan="5"><div class="detin"><div class="detcol"><span class="cluelabel">Hook</span><p>${m.n}</p></div></div></td></tr>`).join("")}</tbody>
   </table></div>
 </div>
 
@@ -5813,7 +5820,12 @@ function stateRow(i,opts){
   const nick=opts.nick
     ?`${nickIcon(opts.nick)}<b>${opts.nick}</b>${nickN>1?` <span class="nickcount">(${nickN})</span>`:""}`
     :x[1];
-  return `<tr class="rowq" data-i="${key}"><td class="st">${flagImg(x[0])}${x[0]}</td><td>${cap}</td><td>${nick}</td><td class="mot">${langMark(x[0])}${x[2]}</td><td class="chev">+</td></tr>
+  /* Whatever the table is sorted by carries the bold: in A-Z by capital the
+     eye is running down the capitals, and a bold state name beside them is
+     the wrong thing shouting. */
+  const bold=opts.bold||"state";
+  const em=(what,html)=>bold===what?"<b>"+html+"</b>":html;
+  return `<tr class="rowq" data-i="${key}"><td class="st${bold==="state"?"":" nb"}">${flagImg(x[0])}${em("state",x[0])}</td><td>${em("cap",cap)}</td><td>${opts.nick?nick:em("nick",x[1])}</td><td class="mot">${langMark(x[0])}${em("motto",x[2])}</td><td class="chev">+</td></tr>
     <tr class="det" data-d="${key}" hidden><td colspan="5"><div class="detin">
       <div class="detcol"><span class="cluelabel">What the motto means</span><p>${nfo.m}</p></div>
       <div class="detcol"><span class="cluelabel">Where the nickname came from</span><p>${nfo.n}</p></div>
@@ -5923,7 +5935,7 @@ function renderStates(mode){
         letter=L;
         html+=grpRow(L,counts[L]+" nickname"+(counts[L]>1?"s":"")+" begin"+(counts[L]>1?"":"s")+" with "+L);
       }
-      html+=stateRow(r.i,{key:"n"+n,nick:r.n});
+      html+=stateRow(r.i,{key:"n"+n,nick:r.n,bold:"nick"});
     });
   }else if(mode==="nickn"){
     /* How many a state has: the four with three are worth knowing as a set. */
@@ -5931,7 +5943,7 @@ function renderStates(mode){
     idx.forEach(i=>{const c=stateNicks(i).length;(by[c]=by[c]||[]).push(i);});
     Object.keys(by).map(Number).sort((a,b)=>b-a).forEach(c=>{
       html+=grpRow(c,by[c].length+" state"+(by[c].length>1?"s":"")+" with "+c+" nickname"+(c>1?"s":""));
-      by[c].forEach(i=>{html+=stateRow(i);});
+      by[c].forEach(i=>{html+=stateRow(i,{bold:"nick"});});
     });
   }else if(mode==="motto"){
     /* Grouped by the language the motto is written in, biggest group first,
@@ -5942,7 +5954,7 @@ function renderStates(mode){
     Object.keys(by).sort((a,b)=>by[b].length-by[a].length||a.localeCompare(b)).forEach(L=>{
       html+=grpRow(LANGICON[L]||"\ud83d\udde3\ufe0f",
         L+" \u00b7 "+by[L].length+" motto"+(by[L].length>1?"s":""));
-      by[L].sort((a,b)=>STATES[a][0].localeCompare(STATES[b][0])).forEach(i=>{html+=stateRow(i);});
+      by[L].sort((a,b)=>STATES[a][0].localeCompare(STATES[b][0])).forEach(i=>{html+=stateRow(i,{bold:"motto"});});
     });
   }else if(mode==="city"){
     idx.sort((a,b)=>capOf(a).localeCompare(capOf(b)));
@@ -5955,7 +5967,7 @@ function renderStates(mode){
         letter=L;
         html+=`<tr class="grp"><td colspan="5"><b>${L}</b><span>${counts[L]} capital${counts[L]>1?"s":""} begin${counts[L]>1?"":"s"} with ${L}</span></td></tr>`;
       }
-      html+=stateRow(i);
+      html+=stateRow(i,{bold:"cap"});
     });
   }else{
     idx.forEach(i=>{html+=stateRow(i);});
