@@ -686,6 +686,12 @@ kbd{
    sorted by something else. */
 td.st.nb{font-weight:400}
 td.sym{white-space:nowrap}
+/* Sorted by language, the mottos are the subject of the page, so they come
+   up to full strength -- still italic, just not greyed. */
+td.mot.lit{color:var(--text)}
+.godsym{
+  margin-top:6px;font-family:var(--f-ui);font-size:13px;color:var(--board-dim);
+}
 .typeicon{margin-right:8px;font-size:15px;line-height:1;cursor:help}
 #stSort .chip{white-space:nowrap}
 /* One picture per event, on the home tile and in front of the panel title. */
@@ -3530,7 +3536,9 @@ const cardsTense=()=>TENSES.map((t,i)=>[t[3]+"<br><br><i>"+t[2]+"</i>",t[0]+" \u
    Demeter's Roman name, also the answer. It belongs on the back either way. */
 const cardsMyth =()=>MYTH.map(m=>[
   godIcon(m.g)+"Greek <b>"+m.g+"</b> \u2014 what is the Roman name, and what does this god rule over?",
-  m.r+"<div class=\"theword\">"+m.d+"</div><div class=\"trap\">"+m.n+"</div>",
+  m.r+"<div class=\"theword\">"+m.d+"</div>"
+    +"<div class=\"godsym\">Symbol: "+godSymbol(m.g)+"</div>"
+    +"<div class=\"trap\">"+m.n+"</div>",
   "Mythology",
   m.h||(squash(m.n).includes(squash(m.r))?"":m.n),
   "myth:"+m.g]);
@@ -5080,18 +5088,25 @@ const TYSETS={
       show:'<span class="spellout">'+x.w.split("").join("-")+'</span>'+(x.h?'<div class="trap">'+x.h+'</div>':"")})},
   myth:{n:"Mythology",tag:"Mythology",scoped:false,
     dirs:[["gr","Greek &rarr; Roman"],["rg","Roman &rarr; Greek"],
-          ["dg","Domain &rarr; Greek"],["dr","Domain &rarr; Roman"]],
+          ["dg","Domain &rarr; Greek"],["dr","Domain &rarr; Roman"],
+          ["sg","Symbol &rarr; Greek"]],
     /* Apollo keeps the same name in both traditions, so he is no question at
        all in the two name-to-name directions. */
-    pool:dir=>(dir==="dg"||dir==="dr")?MYTH:MYTH.filter(m=>m.g!==m.r),
+    pool:dir=>(dir==="gr"||dir==="rg")?MYTH.filter(m=>m.g!==m.r):MYTH,
     item:(m,dir)=>{
       const domain=m.d.replace(/^(God|Goddess) of /i,"").replace(/^King of the gods; god of /i,"");
+      const sym=MYTHTERMS[m.g];
       const q=dir==="gr"?godIcon(m.g)+"The Greeks called this god <b>"+m.g+"</b>. What did the Romans call the same god?"
         :dir==="rg"?godIcon(m.g)+"The Romans called this god <b>"+m.r+"</b>. What did the Greeks call the same god?"
         :dir==="dr"?"Which <em>Roman</em> god is the god or goddess of <b>"+domain+"</b>?"
+        :dir==="sg"?"This is the symbol of which <em>Greek</em> god? <b>"+(sym?godSymbol(m.g):"")+"</b>"
         :"Which <em>Greek</em> god is the god or goddess of <b>"+domain+"</b>?";
       const a=(dir==="gr"||dir==="dr")?m.r:m.g;
+      /* The symbol prints under every verdict but the one that just asked for
+         it -- three things to know about a god, and the drill shows the third
+         while the student is still looking at the answer. */
       return {q:q,a:a,cid:"myth:"+m.g,note:m.n,ph:"Type the name",
+        show:(dir!=="sg"&&sym)?"Symbol: "+godSymbol(m.g):"",
         extra:x=>x==="Jupiter"?["jove"]:[]};
     }}
 };
@@ -5818,7 +5833,7 @@ function stateRow(i,opts){
      times down a page. */
   const bold=opts.bold||"state";
   const em=(what,html)=>bold===what?"<b>"+html+"</b>":html;
-  return `<tr class="rowq" data-i="${key}"><td class="st${bold==="state"?"":" nb"}">${flagImg(x[0])}${em("state",x[0])}</td><td>${em("cap",cap)}</td><td>${opts.nick?nick:em("nick",x[1])}</td><td class="mot">${langMark(x[0])}${em("motto",x[2])}</td><td class="chev">+</td></tr>
+  return `<tr class="rowq" data-i="${key}"><td class="st${bold==="state"?"":" nb"}">${flagImg(x[0])}${em("state",x[0])}</td><td>${em("cap",cap)}</td><td>${opts.nick?nick:em("nick",x[1])}</td><td class="mot${opts.lit?" lit":""}">${langMark(x[0])}${em("motto",x[2])}</td><td class="chev">+</td></tr>
     <tr class="det" data-d="${key}" hidden><td colspan="5"><div class="detin">
       <div class="detcol"><span class="cluelabel">What the motto means</span><p>${nfo.m}</p></div>
       <div class="detcol"><span class="cluelabel">Where the nickname came from</span><p>${nfo.n}</p></div>
@@ -5947,7 +5962,7 @@ function renderStates(mode){
     Object.keys(by).sort((a,b)=>by[b].length-by[a].length||a.localeCompare(b)).forEach(L=>{
       html+=grpRow(LANGICON[L]||"\ud83d\udde3\ufe0f",
         L+" \u00b7 "+by[L].length+" motto"+(by[L].length>1?"s":""));
-      by[L].sort((a,b)=>STATES[a][0].localeCompare(STATES[b][0])).forEach(i=>{html+=stateRow(i,{bold:"none"});});
+      by[L].sort((a,b)=>STATES[a][0].localeCompare(STATES[b][0])).forEach(i=>{html+=stateRow(i,{bold:"none",lit:true});});
     });
   }else if(mode==="city"){
     idx.sort((a,b)=>capOf(a).localeCompare(capOf(b)));
